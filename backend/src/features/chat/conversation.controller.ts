@@ -1,13 +1,14 @@
 import { Request, Response, NextFunction } from "express";
-import { coversationSchema } from "./conversation.validator.js";
-import { conversationService, getConversations as getConversationsService } from "./conversation.service.js";
+import { conversationSchema } from "./conversation.validator.js";
+import { conversationService, getConversations as getConversationsService, deleteConversation as deleteConversationService, updateConversation as updateConversationService } from "./conversation.service.js";
+
 export async function createConversation(
   req: Request,
   res: Response,
   next: NextFunction,
 ) {
   try {
-    const { title } = coversationSchema.parse(req.body);
+    const { title } = conversationSchema.parse(req.body);
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
     const newConversation = await conversationService(title || "", userId);
@@ -16,6 +17,7 @@ export async function createConversation(
     next(error);
   }
 }
+
 export async function getConversations(
   req: Request,
   res: Response,
@@ -26,6 +28,39 @@ export async function getConversations(
     if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
     const conversations = await getConversationsService(userId);
     res.status(200).json({ success: true, data: conversations });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteConversation(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+    const id = req.params.id as string;
+    await deleteConversationService(id, userId);
+    res.status(200).json({ success: true, message: "Deleted" });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateConversation(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+    const id = req.params.id as string;
+    const { title } = req.body;
+    const updated = await updateConversationService(id, userId, { title });
+    res.status(200).json({ success: true, data: updated });
   } catch (error) {
     next(error);
   }

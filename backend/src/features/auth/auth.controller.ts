@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { registerSchema, loginSchema } from "./auth.validator.js";
-import { registerUser, loginUser } from "./auth.service.js";
+import { registerUser, loginUser, updateProfile as updateProfileService } from "./auth.service.js";
 
 export async function register(req: Request, res: Response, next: NextFunction) {
   try {
@@ -20,4 +20,18 @@ export async function login(req: Request, res: Response, next: NextFunction) {
   } catch (err) {
     next(err);
   }
+}
+
+export async function updateProfile(req: Request, res: Response, next: NextFunction) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+    const { fullName } = registerSchema.partial().parse(req.body);
+    // For simplicity, we're only allowing fullName update here. You can extend this to other fields.
+    const result = await updateProfileService(userId, { fullName });
+    res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+
 }

@@ -1,6 +1,6 @@
 import {z} from "zod"
 
-export const coversationSchema = z.object({
+export const conversationSchema = z.object({
      title: z.string().optional(),
      userId : z.string().optional()
 })

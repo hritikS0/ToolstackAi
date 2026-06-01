@@ -38,9 +38,27 @@ export async function loginUser(email: string, password: string) {
     throw Object.assign(new Error("Invalid email or password"), { statusCode: 401 });
   }
 
-  const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, {
+  const token = jwt.sign({ userId: user.id, email: user.email, fullName: user.fullName }, JWT_SECRET, {
     expiresIn: "7d",
   });
 
-  return { token, user: { id: user.id, email: user.email, createdAt: user.createdAt } };
+  return { token, user: { id: user.id, fullName: user.fullName, email: user.email, createdAt: user.createdAt } };
+}
+
+export async function updateProfile(userId: string, updates: { fullName?: string }) {
+  const prisma = getPrismaClient();
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    throw Object.assign(new Error("User not found"), { statusCode: 404 });
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      fullName: updates.fullName || user.fullName,
+    },
+  });
+
+  return { id: updated.id, email: updated.email, fullName: updated.fullName, createdAt: updated.createdAt };
 }

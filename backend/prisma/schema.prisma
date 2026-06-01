@@ -13,7 +13,14 @@ model User {
   password String
   fullName String
 
-  conversations Conversation[]
+  conversations  Conversation[]
+  toolExecutions ToolExecution[]
+  memories       Memory[]
+  brainSettings   BrainSettings?
+  apiKeys        UserApiKey[]
+  usageRecords   UsageRecord[]
+  media          ChatMedia[]
+  files          StoredFile[]
 
   createdAt DateTime @default(now())
 }
@@ -21,13 +28,16 @@ model User {
 model Conversation {
   id String @id @default(cuid())
 
-  title String?
+  title       String?
+  type        String  @default("chat")
+  storagePath String? @default("")
 
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
   messages       Message[]
   toolExecutions ToolExecution[]
+  media          ChatMedia[]
 
   createdAt DateTime @default(now())
 }
@@ -47,8 +57,11 @@ model Message {
 model ToolExecution {
   id String @id @default(cuid())
 
-  conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id])
+
+  userId String?
+  user   User?    @relation(fields: [userId], references: [id])
 
   toolName String
   status   String
@@ -58,4 +71,87 @@ model ToolExecution {
 
   startedAt   DateTime  @default(now())
   completedAt DateTime?
+}
+model Memory {
+  id         String   @id @default(cuid())
+  userId     String
+  category   String
+  title      String
+  content    String
+  importance Int      @default(1)
+  confidence Float    @default(1.0)
+  pinned     Boolean  @default(false)
+  source     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model BrainSettings {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  memoryEnabled Boolean  @default(true)
+  autoExtract   Boolean  @default(true)
+  allowUpdates  Boolean  @default(true)
+  retentionDays Int      @default(365)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model UserApiKey {
+  id           String   @id @default(cuid())
+  userId       String
+  provider     String
+  encryptedKey String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, provider])
+}
+
+model UsageRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  provider  String
+  model     String
+  tokens    Int
+  cost      Float    @default(0)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model ChatMedia {
+  id             String   @id @default(cuid())
+  conversationId String?
+  userId         String
+  fileName       String
+  mimeType       String
+  filePath       String
+  mediaType      String   @default("image")
+  createdAt      DateTime @default(now())
+
+  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id])
+}
+
+model StoredFile {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  type        String
+  bucket      String
+  storagePath String
+  publicUrl   String?
+  size        Int      @default(0)
+  mimeType    String   @default("application/octet-stream")
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
 }

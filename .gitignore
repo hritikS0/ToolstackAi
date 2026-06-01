@@ -1,0 +1,12 @@
+# Editor / AI tool configs
+.agent
+.claude
+.gemini
+.opencode
+.cursor
+
+# OpenSpec (generated docs, not code)
+/openspec
+
+# Uploaded files (dev only, production uses Supabase)
+uploads/
