@@ -229,51 +229,53 @@ export function ChatPage() {
               </div>
             </div>
           </div>
-        ) : isLoading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <Loader2 className="size-4 animate-spin text-base-500" />
-          </div>
         ) : (
           <div className="flex-1 overflow-y-auto bg-workspace">
-            <div className="max-w-4xl mx-auto py-4 px-4 space-y-4">
-              {(messages as Message[]).map(msg => (
-                <MessageBlock
-                  key={msg.id}
-                  role={msg.role as 'user' | 'assistant'}
-                  content={msg.content}
-                  timestamp={msg.createdAt ? formatRelativeTime(msg.createdAt) : undefined}
-                  imageUrl={msg.role === 'user' ? (localImagePreviews[msg.content] || undefined) : undefined}
-                />
-              ))}
+            {isLoading && messages.length === 0 && !optimisticUserMsg && !isStreaming ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="size-4 animate-spin text-base-500" />
+              </div>
+            ) : (
+              <div className="max-w-4xl mx-auto py-4 px-4 space-y-4">
+                {(messages as Message[]).map(msg => (
+                  <MessageBlock
+                    key={msg.id}
+                    role={msg.role as 'user' | 'assistant'}
+                    content={msg.content}
+                    timestamp={msg.createdAt ? formatRelativeTime(msg.createdAt) : undefined}
+                    imageUrl={msg.role === 'user' ? (localImagePreviews[msg.content] || undefined) : undefined}
+                  />
+                ))}
 
-              {optimisticUserMsg && (
-                <MessageBlock
-                  role="user"
-                  content={optimisticUserMsg}
-                  imageUrl={localImagePreviews[optimisticUserMsg] || undefined}
-                />
-              )}
+                {optimisticUserMsg && (
+                  <MessageBlock
+                    role="user"
+                    content={optimisticUserMsg}
+                    imageUrl={localImagePreviews[optimisticUserMsg] || undefined}
+                  />
+                )}
 
-              {isStreaming && (
-                <MessageBlock
-                  role="assistant"
-                  content={streamingContent}
-                  isStreaming
-                  timestamp={streamingContent ? undefined : ''}
-                />
-              )}
+                {isStreaming && (
+                  <MessageBlock
+                    role="assistant"
+                    content={streamingContent}
+                    isStreaming
+                    timestamp={streamingContent ? undefined : ''}
+                  />
+                )}
 
-              {streamError && !isStreaming && (
-                <div className="rounded-[4px] border border-red-500/30 bg-red-500/5 px-3 py-2">
-                  <div className="flex items-start gap-2 text-[11px] text-red-400">
-                    <AlertTriangle className="size-3.5 mt-0.5 shrink-0" />
-                    <span>{streamError}</span>
+                {streamError && !isStreaming && (
+                  <div className="rounded-[4px] border border-red-500/30 bg-red-500/5 px-3 py-2">
+                    <div className="flex items-start gap-2 text-[11px] text-red-400">
+                      <AlertTriangle className="size-3.5 mt-0.5 shrink-0" />
+                      <span>{streamError}</span>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              <div ref={messagesEndRef} />
-            </div>
+                <div ref={messagesEndRef} />
+              </div>
+            )}
           </div>
         )}
 
