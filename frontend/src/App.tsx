@@ -13,12 +13,6 @@ const queryClient = new QueryClient({
 })
 
 function App() {
-  useEffect(() => {
-    // Instantly wake up Render free-tier backend in the background when app mounts
-    const baseUrl = config.api.baseUrl
-    fetch(`${baseUrl}/health`).catch(() => {})
-  }, [])
-
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>

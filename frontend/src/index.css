@@ -161,3 +161,12 @@ html {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Custom utilities */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

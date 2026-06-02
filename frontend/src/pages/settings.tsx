@@ -107,25 +107,25 @@ export function SettingsPage() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="p-6 min-w-0">
-        <div className="flex items-center gap-2 mb-6">
+      <div className="p-4 md:p-6 min-w-0">
+        <div className="flex items-center gap-2 mb-4 md:mb-6">
           <Terminal className="size-4 text-base-500" />
           <h1 className="text-sm font-medium text-base-100 font-mono">Settings</h1>
         </div>
 
-        <div className="flex gap-6">
-          <nav className="w-60 shrink-0 space-y-0.5 sticky top-0 self-start">
+        <div className="flex flex-col md:flex-row gap-6">
+          <nav className="flex md:flex-col overflow-x-auto md:overflow-x-visible no-scrollbar pb-3 md:pb-0 w-full md:w-60 shrink-0 gap-1 border-b border-base-800 md:border-b-0 md:sticky md:top-0 md:self-start" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             {sections.map(s => (
               <button type="button" key={s.id} onClick={() => setActive(s.id)}
-                className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-[4px] text-[12px] transition-colors font-mono ${
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-[4px] text-[12px] transition-colors font-mono shrink-0 whitespace-nowrap ${
                   active === s.id ? 'bg-accent-muted text-accent' : 'text-base-400 hover:text-base-200 hover:bg-base-800'
                 }`}>
                 <s.icon className="size-4" /> {s.label}
               </button>
             ))}
-            <div className="pt-3 mt-3 border-t border-base-800">
+            <div className="flex items-center md:block md:pt-3 md:mt-3 border-l border-base-800 pl-1 ml-1 md:border-l-0 md:pl-0 md:ml-0 md:border-t border-base-800">
               <button type="button" onClick={logout}
-                className="flex items-center gap-2.5 w-full px-3 py-2 rounded-[4px] text-[12px] font-mono text-red-400 hover:bg-base-800 transition-colors">
+                className="flex items-center gap-2.5 px-3 py-2 rounded-[4px] text-[12px] font-mono text-red-400 hover:bg-base-800 transition-colors shrink-0 whitespace-nowrap">
                 <LogOut className="size-4" /> Sign out
               </button>
             </div>
@@ -135,7 +135,7 @@ export function SettingsPage() {
             {active === 'profile' && (
               <>
                 <div className="rounded-[4px] border border-base-800 bg-surface overflow-hidden">
-                  <div className="px-5 py-4 border-b border-base-800 bg-surface-alt flex items-center gap-3">
+                  <div className="px-4 py-3 md:px-5 md:py-4 border-b border-base-800 bg-surface-alt flex items-center gap-3">
                     <div className="size-12 rounded-[4px] bg-accent/20 border border-accent/30 flex items-center justify-center text-base font-medium text-accent font-mono">
                       {initials}
                     </div>
@@ -145,23 +145,23 @@ export function SettingsPage() {
                     </div>
                   </div>
 
-                  <div className="p-5">
+                  <div className="p-4 md:p-5">
                     <h3 className="text-[10px] font-medium text-base-400 uppercase tracking-wider font-mono mb-3">Personal Information</h3>
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="text-[10px] font-medium text-base-400 mb-1 block font-mono uppercase tracking-wider">Full Name</label>
-                        <Input value={fullName} onChange={e => setFullName(e.target.value)} className="h-8 text-[12px]" />
+                        <Input value={fullName} onChange={e => setFullName(e.target.value)} className="h-8 text-[12px] w-full" />
                       </div>
                       <div>
                         <label className="text-[10px] font-medium text-base-400 mb-1 block font-mono uppercase tracking-wider">Email</label>
-                        <Input value={user?.email || ''} disabled className="h-8 text-[12px]" />
+                        <Input value={user?.email || ''} disabled className="h-8 text-[12px] w-full" />
                       </div>
                     </div>
                   </div>
 
-                  <div className="px-5 pb-5">
+                  <div className="px-4 pb-4 md:px-5 md:pb-5">
                     <h3 className="text-[10px] font-medium text-base-400 uppercase tracking-wider font-mono mb-3">Account Details</h3>
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
                       <div className="flex items-center gap-2">
                         <span className="text-[11px] text-base-500 font-mono w-20 shrink-0">Role</span>
                         <span className="text-[11px] text-base-200 font-mono">Developer</span>
@@ -175,12 +175,12 @@ export function SettingsPage() {
                     </div>
                   </div>
 
-                  <div className="px-5 pb-5 flex items-center gap-2">
-                    <Button variant="primary" size="sm" onClick={handleSaveProfile} disabled={saving}>
+                  <div className="px-4 pb-4 md:px-5 md:pb-5 flex flex-col sm:flex-row sm:items-center gap-2">
+                    <Button variant="primary" size="sm" onClick={handleSaveProfile} disabled={saving} className="w-full sm:w-auto justify-center">
                       <Save className="size-3.5" /> {saving ? 'Saving...' : 'Save Changes'}
                     </Button>
                     {saveMsg && (
-                      <span className="flex items-center gap-1 text-[10px] font-mono text-accent">
+                      <span className="flex items-center justify-center gap-1 text-[10px] font-mono text-accent">
                         <Check className="size-3" /> {saveMsg}
                       </span>
                     )}
@@ -191,44 +191,44 @@ export function SettingsPage() {
 
             {active === 'security' && (
               <div className="rounded-[4px] border border-base-800 bg-surface overflow-hidden">
-                <div className="px-5 py-4 border-b border-base-800 bg-surface-alt flex items-center gap-2">
+                <div className="px-4 py-3 md:px-5 md:py-4 border-b border-base-800 bg-surface-alt flex items-center gap-2">
                   <KeyRound className="size-4 text-base-400" />
                   <h2 className="text-[12px] font-medium text-base-200 font-mono">Password</h2>
                 </div>
-                <div className="p-5 space-y-4">
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                <div className="p-4 md:p-5 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="text-[10px] font-medium text-base-400 mb-1 block font-mono uppercase tracking-wider">Current Password</label>
-                      <Input type="password" placeholder="Enter current password" className="h-8 text-[12px]" />
+                      <Input type="password" placeholder="Enter current password" className="h-8 text-[12px] w-full" />
                     </div>
-                    <div />
+                    <div className="hidden md:block" />
                     <div>
                       <label className="text-[10px] font-medium text-base-400 mb-1 block font-mono uppercase tracking-wider">New Password</label>
-                      <Input type="password" placeholder="Enter new password" className="h-8 text-[12px]" />
+                      <Input type="password" placeholder="Enter new password" className="h-8 text-[12px] w-full" />
                     </div>
                     <div>
                       <label className="text-[10px] font-medium text-base-400 mb-1 block font-mono uppercase tracking-wider">Confirm Password</label>
-                      <Input type="password" placeholder="Confirm new password" className="h-8 text-[12px]" />
+                      <Input type="password" placeholder="Confirm new password" className="h-8 text-[12px] w-full" />
                     </div>
                   </div>
-                  <Button variant="primary" size="sm">Update Password</Button>
+                  <Button variant="primary" size="sm" className="w-full md:w-auto justify-center">Update Password</Button>
                 </div>
               </div>
             )}
 
             {active === 'api-keys' && (
               <div className="rounded-[4px] border border-base-800 bg-surface overflow-hidden">
-                <div className="px-5 py-4 border-b border-base-800 bg-surface-alt flex items-center gap-2">
+                <div className="px-4 py-3 md:px-5 md:py-4 border-b border-base-800 bg-surface-alt flex items-center gap-2">
                   <KeyRound className="size-4 text-base-400" />
                   <h2 className="text-[12px] font-medium text-base-200 font-mono">API Keys</h2>
                   <span className="text-[10px] text-base-600 font-mono ml-2">Bring your own keys</span>
                 </div>
-                <div className="p-5 space-y-3">
+                <div className="p-4 md:p-5 space-y-3">
                   {providers.map(p => {
                     const k = keyMap.get(p.id)
                     return (
                       <div key={p.id} className="rounded-[4px] border border-base-800 bg-base-950 p-4 space-y-3">
-                        <div className="flex items-start justify-between gap-4">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                           <div className="flex items-start gap-2.5 min-w-0">
                             <div className={`size-2 rounded-full mt-1.5 shrink-0 ${k?.isActive ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-base-600'}`} />
                             <div className="min-w-0">
@@ -238,7 +238,7 @@ export function SettingsPage() {
                               </div>
                               {k ? (
                                 <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                                  <span className="text-[10px] font-mono text-base-400 bg-base-900 px-1.5 py-0.5 rounded border border-base-800">{k.maskedKey}</span>
+                                  <span className="text-[9px] font-mono text-base-400 bg-base-900 px-1.5 py-0.5 rounded border border-base-800 truncate max-w-[110px] xs:max-w-[160px] sm:max-w-none inline-block align-middle">{k.maskedKey}</span>
                                   <span className="text-[9px] text-base-600 font-mono">Added {new Date(k.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                                 </div>
                               ) : (
@@ -246,13 +246,13 @@ export function SettingsPage() {
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-1.5 shrink-0">
+                          <div className="flex items-center gap-1.5 shrink-0 w-full sm:w-auto justify-end">
                             {k && (
                               <>
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="text-[10px] h-7 px-2 hover:bg-base-800 text-base-400 hover:text-base-200"
+                                  className="text-[10px] h-7 px-2 hover:bg-base-800 text-base-400 hover:text-base-200 flex-1 sm:flex-initial justify-center"
                                   onClick={() => handleTest(p.id)}
                                   disabled={testing !== null}
                                 >
@@ -266,7 +266,7 @@ export function SettingsPage() {
                                 <Button 
                                   variant="ghost" 
                                   size="sm" 
-                                  className="text-[10px] h-7 w-7 p-0 text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center justify-center" 
+                                  className="text-[10px] h-7 w-7 p-0 text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center justify-center shrink-0" 
                                   onClick={() => deleteMutation.mutate(p.id)}
                                 >
                                   <Trash2 className="size-3" />
@@ -276,7 +276,7 @@ export function SettingsPage() {
                             <Button
                               variant="secondary"
                               size="sm"
-                              className="text-[10px] h-7 px-2"
+                              className={`text-[10px] h-7 px-2 justify-center ${k ? 'flex-1 sm:flex-initial' : 'w-full sm:w-auto'}`}
                               onClick={() => { setAddProvider(p.id); setNewKey('') }}
                             >
                               {k ? <Pencil className="size-3" /> : <Plus className="size-3" />}
@@ -307,22 +307,24 @@ export function SettingsPage() {
                           {keyMap.has(addProvider) ? 'Update' : 'Add'} {providers.find(p => p.id === addProvider)?.name} key
                         </span>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                         <Input
                           type="password"
                           value={newKey}
                           onChange={e => setNewKey(e.target.value)}
                           placeholder="sk-..."
-                          className="h-8 text-[12px] font-mono flex-1"
+                          className="h-8 text-[12px] font-mono w-full sm:flex-1"
                           autoFocus
                           onKeyDown={e => { if (e.key === 'Enter' && newKey.trim()) saveMutation.mutate({ provider: addProvider, key: newKey.trim() }) }}
                         />
-                        <Button variant="primary" size="sm" onClick={() => saveMutation.mutate({ provider: addProvider, key: newKey.trim() })} disabled={!newKey.trim() || saveMutation.isPending}>
-                          {saveMutation.isPending ? <Loader2 className="size-3.5 animate-spin" /> : saveMutation.isPending ? 'Saving...' : 'Save'}
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setAddProvider('')}>
-                          <X className="size-3.5" />
-                        </Button>
+                        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                          <Button variant="primary" size="sm" onClick={() => saveMutation.mutate({ provider: addProvider, key: newKey.trim() })} disabled={!newKey.trim() || saveMutation.isPending} className="w-full sm:w-auto justify-center">
+                            {saveMutation.isPending ? <Loader2 className="size-3.5 animate-spin" /> : saveMutation.isPending ? 'Saving...' : 'Save'}
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setAddProvider('')} className="shrink-0">
+                            <X className="size-3.5" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -336,17 +338,17 @@ export function SettingsPage() {
 
             {active === 'theme' && (
               <div className="rounded-[4px] border border-base-800 bg-surface overflow-hidden">
-                <div className="px-5 py-4 border-b border-base-800 bg-surface-alt flex items-center justify-between">
+                <div className="px-4 py-3 md:px-5 md:py-4 border-b border-base-800 bg-surface-alt flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <Palette className="size-4 text-base-400" />
                     <h2 className="text-[12px] font-medium text-base-200 font-mono">Appearance</h2>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => openThemeModal(true)}>
+                  <Button variant="ghost" size="sm" onClick={() => openThemeModal(true)} className="w-full sm:w-auto justify-center">
                     <ExternalLink className="size-3.5" /> Open Theme Manager
                   </Button>
                 </div>
-                <div className="p-5">
-                  <div className="grid grid-cols-4 gap-2">
+                <div className="p-4 md:p-5">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {builtinThemes.slice(0, 8).map(t => {
                       const active = theme.id === t.id
                       return (
@@ -405,11 +407,11 @@ export function SettingsPage() {
                 </div>
 
                 <div className="rounded-[4px] border border-base-800 bg-surface overflow-hidden">
-                  <div className="px-5 py-4 border-b border-base-800 bg-surface-alt flex items-center gap-2">
+                  <div className="px-4 py-3 md:px-5 md:py-4 border-b border-base-800 bg-surface-alt flex items-center gap-2">
                     <Activity className="size-4 text-base-400" />
                     <h2 className="text-[12px] font-medium text-base-200 font-mono">Recent Activity</h2>
                   </div>
-                  <div className="p-5">
+                  <div className="p-4 md:p-5">
                     <div className="text-center py-8">
                       <Activity className="size-6 text-base-700 mx-auto mb-2" />
                       <p className="text-[11px] text-base-600 font-mono">No recent activity</p>
