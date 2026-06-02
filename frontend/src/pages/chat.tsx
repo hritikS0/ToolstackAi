@@ -67,12 +67,14 @@ export function ChatPage() {
       if (res.data?.conversation) {
         convId = res.data.conversation.id
         navigate(`/chat/${convId}`, { replace: true })
+        console.log('[chat] created conversation', convId)
         queryClient.invalidateQueries({ queryKey: ['conversations'] })
       }
     }
     if (!convId) return
 
     const msg = input.trim() || '(Image analysis)'
+    console.log('[chat] send start', { msg, convId })
     setInput('')
     setStreamingContent('')
     setStreamError(null)
@@ -81,6 +83,7 @@ export function ChatPage() {
 
     if (attachedImage) {
       const imgPreview = attachedImage.preview
+      console.log('[chat] optimistic user msg (image)', msg)
       setOptimisticUserMsg(msg)
       setLocalImagePreviews(prev => ({ ...prev, [msg]: imgPreview }))
       setAttachedImage(null)
@@ -88,6 +91,7 @@ export function ChatPage() {
         const res = await chatService.visionChat({ message: msg, conversationId: convId, image: attachedImage.file })
         if (res.success && res.data) {
           setStreamingContent(res.data.answer)
+          console.log('[chat] vision response received')
           if (res.data.memorySaved && res.data.memorySaved > 0) {
             setBrainNoti(`Saved ${res.data.memorySaved} ${res.data.memorySaved === 1 ? 'memory' : 'memories'} to Brain`)
             if (brainNotiTimer.current) clearTimeout(brainNotiTimer.current)
@@ -100,18 +104,23 @@ export function ChatPage() {
           : err instanceof Error ? err.message : 'Vision request failed.'
         setStreamError(errMsg)
       } finally {
+        console.log('[chat] vision complete, refetching messages')
         setIsStreaming(false)
-        setOptimisticUserMsg(null)
-        queryClient.invalidateQueries({ queryKey: ['messages', convId] })
+        await queryClient.invalidateQueries({ queryKey: ['messages', convId] })
         queryClient.invalidateQueries({ queryKey: ['conversations'] })
+        console.log('[chat] vision refetch done, clearing optimistic state')
+        setStreamingContent('')
+        setOptimisticUserMsg(null)
       }
       return
     }
 
+    console.log('[chat] optimistic user msg', msg)
     setOptimisticUserMsg(msg)
     let fullContent = ''
     let failed = false
     try {
+      console.log('[chat] stream start')
       await chatService.streamChat(
         { message: msg, conversationId: convId },
         (chunk: string) => {
@@ -119,30 +128,39 @@ export function ChatPage() {
           scheduleRender(fullContent)
         },
         (saved: number) => {
+          console.log('[chat] brain memory saved', saved)
           setBrainNoti(`Saved ${saved} ${saved === 1 ? 'memory' : 'memories'} to Brain`)
           if (brainNotiTimer.current) clearTimeout(brainNotiTimer.current)
           brainNotiTimer.current = setTimeout(() => setBrainNoti(null), 4000)
         },
       )
+      console.log('[chat] stream end', { contentLength: fullContent.length })
     } catch (err) {
       failed = true
+      console.log('[chat] stream error', err)
       const errMsg = typeof err === 'object' && err !== null && 'response' in err
         ? String((err as any).response?.data?.message || (err as any).message || 'Connection failed.')
         : err instanceof Error ? err.message : 'Connection failed.'
       setStreamError(errMsg)
     } finally {
+      console.log('[chat] stream complete, refetching messages', { failed, hasContent: !!fullContent })
       setIsStreaming(false)
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
       rafRef.current = null
       contentRef.current = ''
+
       if (failed && !fullContent) {
         setStreamingContent('')
-      } else {
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['messages', convId] })
+      queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      console.log('[chat] refetch done, clearing optimistic state')
+
+      if (!failed || fullContent) {
         setStreamingContent('')
         setOptimisticUserMsg(null)
       }
-      queryClient.invalidateQueries({ queryKey: ['messages', convId] })
-      queryClient.invalidateQueries({ queryKey: ['conversations'] })
     }
   }
 
@@ -237,7 +255,11 @@ export function ChatPage() {
               </div>
             ) : (
               <div className="max-w-4xl mx-auto py-4 px-4 space-y-4">
-                {(messages as Message[]).map(msg => (
+                {(messages as Message[]).filter(m => {
+                  if (optimisticUserMsg && m.role === 'user' && m.content === optimisticUserMsg) return false
+                  if (!isStreaming && streamingContent && m.role === 'assistant' && m.content === streamingContent) return false
+                  return true
+                }).map(msg => (
                   <MessageBlock
                     key={msg.id}
                     role={msg.role as 'user' | 'assistant'}
@@ -247,7 +269,7 @@ export function ChatPage() {
                   />
                 ))}
 
-                {optimisticUserMsg && (
+                {optimisticUserMsg && !(messages as Message[]).some(m => m.role === 'user' && m.content === optimisticUserMsg) && (
                   <MessageBlock
                     role="user"
                     content={optimisticUserMsg}
@@ -261,6 +283,13 @@ export function ChatPage() {
                     content={streamingContent}
                     isStreaming
                     timestamp={streamingContent ? undefined : ''}
+                  />
+                )}
+
+                {!isStreaming && streamingContent && !(messages as Message[]).some(m => m.role === 'assistant' && m.content === streamingContent) && (
+                  <MessageBlock
+                    role="assistant"
+                    content={streamingContent}
                   />
                 )}
 
