@@ -58,7 +58,7 @@ export function Composer({ value, onChange, onSend, disabled, placeholder, attac
             placeholder={placeholder || 'Type a message...'}
             rows={1}
             disabled={disabled}
-            className="flex-1 bg-transparent text-[12px] text-base-100 placeholder:text-base-600 resize-none outline-none min-h-[20px] max-h-[200px] leading-relaxed font-mono disabled:opacity-40"
+            className="flex-1 bg-transparent text-[15px] text-base-100 placeholder:text-base-600 resize-none outline-none min-h-[24px] max-h-[200px] leading-relaxed font-mono disabled:opacity-40"
           />
           <div className="flex items-center gap-1 shrink-0">
             {onAttachImage && (

@@ -43,25 +43,25 @@ function AssistantMessage({
     <div className="group rounded-[4px] border border-base-800 bg-surface overflow-hidden">
       <div className="flex items-center justify-between h-8 px-3 border-b border-base-800 bg-base-950/50">
         <div className="flex items-center gap-2">
-          <Sparkles className="size-3 text-accent/60" />
-          <span className="text-[11px] font-medium text-accent">{modelName || 'ToolStackAI'}</span>
+          <Sparkles className="size-3.5 text-accent/60" />
+          <span className="text-[14px] font-medium text-accent">{modelName || 'ToolStackAI'}</span>
           {showThinking && (
-            <span className="text-[10px] text-base-500 font-mono">thinking</span>
+            <span className="text-[13px] text-base-500 font-mono">thinking</span>
           )}
           {tokenSpeed && (
-            <span className="text-[10px] text-base-600 font-mono">{tokenSpeed}</span>
+            <span className="text-[13px] text-base-600 font-mono">{tokenSpeed}</span>
           )}
         </div>
         <div className="flex items-center gap-1">
           {timestamp && (
-            <span className="text-[10px] text-base-600 font-mono">{timestamp}</span>
+            <span className="text-[13px] text-base-600 font-mono">{timestamp}</span>
           )}
         </div>
       </div>
 
-      <div className="px-4 py-3 min-h-[28px]">
+      <div className="px-4 py-3.5 min-h-[32px]">
         <span className={cn(
-          'text-[12px] leading-relaxed',
+          'text-[15px] leading-relaxed',
           showThinking ? 'text-base-400 font-mono' : 'text-base-200',
           !showThinking && hasContent && (isStreaming || isThinking) && 'thinking-fade-in',
           isStreaming && hasContent && 'streaming-in'
@@ -70,7 +70,7 @@ function AssistantMessage({
             <>{thinkingMessage || 'Thinking...'}<TerminalCursor /></>
           ) : hasContent ? (
             <>
-              <div className="prose prose-invert max-w-none text-[12px] leading-relaxed">
+              <div className="prose prose-invert max-w-none text-[15px] leading-relaxed">
                 <ReactMarkdown
                   rehypePlugins={[rehypeHighlight]}
                   remarkPlugins={[remarkGfm]}

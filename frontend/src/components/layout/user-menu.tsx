@@ -79,10 +79,10 @@ export function UserMenu() {
         aria-expanded={open}
       >
         <UserAvatar fullName={user.fullName} size="sm" showIndicator />
-        <span className="hidden sm:block text-[11px] text-base-400 group-hover:text-base-200 font-mono max-w-[120px] truncate">
+        <span className="hidden sm:block text-[14px] text-base-400 group-hover:text-base-200 font-mono max-w-[120px] truncate">
           {user.fullName}
         </span>
-        <ChevronDown className="size-3 text-base-600 group-hover:text-base-400 transition-colors" />
+        <ChevronDown className="size-3.5 text-base-600 group-hover:text-base-400 transition-colors" />
       </button>
 
       {open && (
@@ -95,8 +95,8 @@ export function UserMenu() {
             <div className="flex items-center gap-2.5">
               <UserAvatar fullName={user.fullName} size="sm" />
               <div className="min-w-0">
-                <p className="text-[11px] font-medium text-base-200 font-mono truncate">{user.fullName}</p>
-                <p className="text-[10px] text-base-500 font-mono truncate">{user.email}</p>
+                <p className="text-[14px] font-medium text-base-200 font-mono truncate">{user.fullName}</p>
+                <p className="text-[13px] text-base-500 font-mono truncate">{user.email}</p>
               </div>
             </div>
           </div>

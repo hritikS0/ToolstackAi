@@ -43,7 +43,7 @@ body {
   background: var(--color-workspace);
   color: var(--color-base-100);
   font-family: var(--font-sans);
-  font-size: 12px;
+  font-size: 15px;
   line-height: var(--density-line-height, 1.6);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

@@ -3,7 +3,7 @@ import { deriveColors } from './utils'
 
 const baseTypography = {
   fontFamily: "'JetBrains Mono', 'IBM Plex Mono', ui-monospace, monospace",
-  fontSize: '12px',
+  fontSize: '15px',
   lineHeight: '1.6',
 } as const
 
