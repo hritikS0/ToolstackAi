@@ -9,6 +9,14 @@ import { formatRelativeTime } from '@/lib/utils'
 import { MessageSquare, Plus, Loader2, AlertTriangle, X, BrainCircuit } from 'lucide-react'
 import type { Message, Conversation } from '@/types/api'
 
+const THINKING_MESSAGES = [
+  'Thinking...',
+  'Looking into that...',
+  'Analyzing context...',
+  'Reviewing information...',
+  'Working on it...',
+]
+
 export function ChatPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -27,6 +35,16 @@ export function ChatPage() {
   const contentRef = useRef('')
   const rafRef = useRef<number | null>(null)
   const [showConvList, setShowConvList] = useState(true)
+  const [isThinking, setIsThinking] = useState(false)
+  const [thinkingMessage, setThinkingMessage] = useState(THINKING_MESSAGES[0])
+  const thinkingRef = useRef({
+    active: false,
+    startedAt: 0,
+    minMs: 400,
+    pendingContent: '',
+    timerId: null as ReturnType<typeof setTimeout> | null,
+  })
+  const thinkingMsgInterval = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const { data: conversations = [] } = useQuery({
     queryKey: ['conversations'],
@@ -51,6 +69,36 @@ export function ChatPage() {
 
   const scheduleRender = useCallback((content: string) => {
     contentRef.current = content
+
+    if (thinkingRef.current.active) {
+      const elapsed = Date.now() - thinkingRef.current.startedAt
+      if (elapsed >= thinkingRef.current.minMs) {
+        thinkingRef.current.active = false
+        setIsThinking(false)
+        if (thinkingRef.current.timerId) {
+          clearTimeout(thinkingRef.current.timerId)
+          thinkingRef.current.timerId = null
+        }
+      } else {
+        thinkingRef.current.pendingContent = content
+        if (!thinkingRef.current.timerId) {
+          const remaining = thinkingRef.current.minMs - elapsed
+          thinkingRef.current.timerId = setTimeout(() => {
+            thinkingRef.current.timerId = null
+            thinkingRef.current.active = false
+            setIsThinking(false)
+            const pending = thinkingRef.current.pendingContent
+            thinkingRef.current.pendingContent = ''
+            contentRef.current = pending
+            if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+            rafRef.current = null
+            setStreamingContent(pending)
+          }, remaining + 30)
+        }
+        return
+      }
+    }
+
     if (rafRef.current === null) {
       rafRef.current = requestAnimationFrame(() => {
         rafRef.current = null
@@ -80,6 +128,14 @@ export function ChatPage() {
     setStreamError(null)
     setIsStreaming(true)
     contentRef.current = ''
+    setIsThinking(true)
+    thinkingRef.current = {
+      active: true,
+      startedAt: Date.now(),
+      minMs: 350 + Math.floor(Math.random() * 350),
+      pendingContent: '',
+      timerId: null,
+    }
 
     if (attachedImage) {
       const imgPreview = attachedImage.preview
@@ -106,6 +162,9 @@ export function ChatPage() {
       } finally {
         console.log('[chat] vision complete, refetching messages')
         setIsStreaming(false)
+        if (thinkingRef.current.timerId) clearTimeout(thinkingRef.current.timerId)
+        thinkingRef.current.active = false
+        setIsThinking(false)
         await queryClient.invalidateQueries({ queryKey: ['messages', convId] })
         queryClient.invalidateQueries({ queryKey: ['conversations'] })
         console.log('[chat] vision refetch done, clearing optimistic state')
@@ -145,6 +204,9 @@ export function ChatPage() {
     } finally {
       console.log('[chat] stream complete, refetching messages', { failed, hasContent: !!fullContent })
       setIsStreaming(false)
+      if (thinkingRef.current.timerId) clearTimeout(thinkingRef.current.timerId)
+      thinkingRef.current.active = false
+      setIsThinking(false)
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
       rafRef.current = null
       contentRef.current = ''
@@ -179,7 +241,33 @@ export function ChatPage() {
   useEffect(() => { setLocalImagePreviews({}) }, [id])
 
   useEffect(() => {
-    return () => { if (brainNotiTimer.current) clearTimeout(brainNotiTimer.current) }
+    if (!isThinking) {
+      if (thinkingMsgInterval.current) {
+        clearInterval(thinkingMsgInterval.current)
+        thinkingMsgInterval.current = null
+      }
+      return
+    }
+    let i = 0
+    setThinkingMessage(THINKING_MESSAGES[0])
+    thinkingMsgInterval.current = setInterval(() => {
+      i = (i + 1) % THINKING_MESSAGES.length
+      setThinkingMessage(THINKING_MESSAGES[i])
+    }, 2200)
+    return () => {
+      if (thinkingMsgInterval.current) {
+        clearInterval(thinkingMsgInterval.current)
+        thinkingMsgInterval.current = null
+      }
+    }
+  }, [isThinking])
+
+  useEffect(() => {
+    return () => {
+      if (brainNotiTimer.current) clearTimeout(brainNotiTimer.current)
+      if (thinkingMsgInterval.current) clearInterval(thinkingMsgInterval.current)
+      if (thinkingRef.current.timerId) clearTimeout(thinkingRef.current.timerId)
+    }
   }, [])
 
   const currentConv = conversations.find(c => c.id === id)
@@ -249,7 +337,7 @@ export function ChatPage() {
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto bg-workspace">
-            {isLoading && messages.length === 0 && !optimisticUserMsg && !isStreaming ? (
+            {isLoading && messages.length === 0 && !optimisticUserMsg && !isStreaming && !isThinking ? (
               <div className="flex items-center justify-center h-full">
                 <Loader2 className="size-4 animate-spin text-base-500" />
               </div>
@@ -282,6 +370,8 @@ export function ChatPage() {
                     role="assistant"
                     content={streamingContent}
                     isStreaming
+                    isThinking={isThinking}
+                    thinkingMessage={thinkingMessage}
                     timestamp={streamingContent ? undefined : ''}
                   />
                 )}

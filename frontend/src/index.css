@@ -128,6 +128,36 @@ html {
   transform-origin: top right;
 }
 
+@keyframes thinking-dot-bounce {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-3px); }
+}
+.thinking-dot {
+  animation: thinking-dot-bounce 1.2s ease-in-out infinite;
+}
+.thinking-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.thinking-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes thinking-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.thinking-fade-in {
+  animation: thinking-fade-in 0.3s ease-out;
+}
+
+@keyframes streaming-fade-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.streaming-in {
+  animation: streaming-fade-in 0.2s ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
