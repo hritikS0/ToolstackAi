@@ -246,26 +246,6 @@ export function ChatPage() {
   }, [id, isStreaming])
 
   useEffect(() => {
-    if (isStreaming) return
-
-    const streamConfirmed = streamingContent && (messages as Message[]).some(
-      m => m.role === 'assistant' && m.content === streamingContent
-    )
-    const optimisticConfirmed = optimisticUserMsg && (messages as Message[]).some(
-      m => m.role === 'user' && m.content === optimisticUserMsg
-    )
-
-    if (streamConfirmed && optimisticConfirmed) {
-      console.log('[chat] server confirmed both messages, clearing local state')
-      setStreamingContent('')
-      setOptimisticUserMsg(null)
-    } else if (streamConfirmed) {
-      console.log('[chat] server confirmed assistant message, clearing streaming')
-      setStreamingContent('')
-    }
-  }, [messages, isStreaming, streamingContent, optimisticUserMsg])
-
-  useEffect(() => {
     if (!isThinking) {
       if (thinkingMsgInterval.current) {
         clearInterval(thinkingMsgInterval.current)
