@@ -21,7 +21,7 @@ export function AppLayout() {
   if (!isAuthenticated) return <Navigate to={config.auth.loginPath} replace />
 
   return (
-    <div className="h-screen flex overflow-hidden bg-workspace">
+    <div className="h-dvh flex overflow-hidden bg-workspace">
       <div className="hidden md:block">
         <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(s => !s)} onThemeClick={() => setIsOpen(true)} />
       </div>
