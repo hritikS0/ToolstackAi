@@ -18,7 +18,7 @@ function MenuItem({ icon, label, shortcut, danger, onClick }: MenuItemProps) {
   return (
     <button type="button"
       onClick={onClick}
-      className="flex items-center gap-2.5 w-full px-2.5 py-1.5 text-[11px] text-left transition-colors rounded-[2px]
+      className="flex items-center gap-2.5 w-full px-2.5 py-1.5 text-[14px] text-left transition-colors rounded-[2px]
         hover:bg-base-800
         group"
     >
@@ -29,7 +29,7 @@ function MenuItem({ icon, label, shortcut, danger, onClick }: MenuItemProps) {
         {label}
       </span>
       {shortcut && (
-        <span className="text-[9px] text-base-600 font-mono">{shortcut}</span>
+        <span className="text-[12px] text-base-600 font-mono">{shortcut}</span>
       )}
     </button>
   )

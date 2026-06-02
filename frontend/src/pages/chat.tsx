@@ -283,7 +283,7 @@ export function ChatPage() {
       {showConvList && (
         <div className="w-52 border-r border-base-800 bg-surface flex flex-col shrink-0">
           <div className="h-[37px] border-b border-base-800 flex items-center justify-between px-2">
-            <span className="text-[13px] font-medium text-base-500 uppercase tracking-wider">Conversations</span>
+            <span className="text-[12px] font-medium text-base-500 uppercase tracking-wider">Conversations</span>
             <Button variant="ghost" size="icon" className="size-5" onClick={() => setShowConvList(false)}>
               <X className="size-3" />
             </Button>

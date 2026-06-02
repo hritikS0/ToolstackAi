@@ -25,7 +25,14 @@ const defaultTheme = getThemeById('original') || builtinThemes[0]
 function loadTheme(): ThemeConfig {
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) return JSON.parse(saved) as ThemeConfig
+    if (saved) {
+      const theme = JSON.parse(saved) as ThemeConfig
+      const fontSizeNum = parseInt(theme.typography.fontSize)
+      if (!isNaN(fontSizeNum) && fontSizeNum < 15) {
+        theme.typography.fontSize = '15px'
+      }
+      return theme
+    }
   } catch {}
   return defaultTheme
 }

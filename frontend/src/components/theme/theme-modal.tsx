@@ -228,7 +228,7 @@ export function ThemeModal() {
                       onChange={e => updateTheme({ typography: { ...theme.typography, fontSize: e.target.value } })}
                       className="w-full h-6 rounded-[2px] border border-base-800 bg-base-950 px-1.5 text-[10px] font-mono text-base-200 outline-none focus:border-accent/40"
                     >
-                      {['11px', '12px', '13px', '14px', '15px'].map(s => (
+                      {['15px', '16px', '17px', '18px', '20px'].map(s => (
                         <option key={s} value={s}>{s}</option>
                       ))}
                     </select>

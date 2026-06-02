@@ -94,7 +94,7 @@ function AssistantMessage({
       <div className="flex items-center gap-1 px-3 py-1.5 border-t border-base-800 opacity-0 group-hover:opacity-100 transition-opacity">
         <button type="button"
           onClick={handleCopy}
-          className="flex items-center gap-1 h-6 px-1.5 rounded-[2px] text-[10px] text-base-500 hover:text-base-300 hover:bg-base-800 transition-colors"
+          className="flex items-center gap-1 h-6 px-1.5 rounded-[2px] text-[13px] text-base-500 hover:text-base-300 hover:bg-base-800 transition-colors"
         >
           {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
           {copied ? 'Copied' : 'Copy'}
@@ -102,7 +102,7 @@ function AssistantMessage({
         {onEdit && (
           <button type="button"
             onClick={onEdit}
-            className="flex items-center gap-1 h-6 px-1.5 rounded-[2px] text-[10px] text-base-500 hover:text-base-300 hover:bg-base-800 transition-colors"
+            className="flex items-center gap-1 h-6 px-1.5 rounded-[2px] text-[13px] text-base-500 hover:text-base-300 hover:bg-base-800 transition-colors"
           >
             <Pencil className="size-3" />
             Edit
@@ -111,7 +111,7 @@ function AssistantMessage({
         {onRetry && (
           <button type="button"
             onClick={onRetry}
-            className="flex items-center gap-1 h-6 px-1.5 rounded-[2px] text-[10px] text-base-500 hover:text-base-300 hover:bg-base-800 transition-colors"
+            className="flex items-center gap-1 h-6 px-1.5 rounded-[2px] text-[13px] text-base-500 hover:text-base-300 hover:bg-base-800 transition-colors"
           >
             <RefreshCw className="size-3" />
             Retry
@@ -125,11 +125,11 @@ function AssistantMessage({
 function UserMessage({ content, imageUrl }: { content: string; imageUrl?: string }) {
   return (
     <div className="flex justify-end animate-fade-in">
-      <div className="max-w-[75%] rounded-[4px] bg-accent-muted border border-accent/20 px-3 py-2 space-y-2">
+      <div className="max-w-[90%] rounded-[4px] bg-accent-muted border border-accent/20 px-3 py-2 space-y-2">
         {imageUrl && (
           <img src={imageUrl} alt="Attached" className="max-w-full h-auto max-h-48 rounded-[3px] border border-accent/10" />
         )}
-        {content && <div className="text-[12px] text-base-200 whitespace-pre-wrap">{String(content)}</div>}
+        {content && <div className="text-[15px] text-base-200 whitespace-pre-wrap">{String(content)}</div>}
       </div>
     </div>
   )

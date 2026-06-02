@@ -133,10 +133,10 @@ export function BrainPage() {
   const sortedMemories = [...pinnedMemories, ...unpinnedMemories]
 
   const sectionNav = (
-    <nav className="w-48 border-r border-base-800 bg-surface flex flex-col shrink-0">
+    <nav className="hidden md:flex w-48 border-r border-base-800 bg-surface flex-col shrink-0">
       <div className="h-[37px] border-b border-base-800 flex items-center px-3">
         <Brain className="size-4 text-accent mr-2" />
-        <span className="text-[11px] font-medium text-base-100 font-mono">Brain</span>
+        <span className="text-[14px] font-medium text-base-100 font-mono">Brain</span>
       </div>
       <div className="flex-1 py-1 overflow-y-auto">
         {sections.map(s => {
@@ -145,18 +145,38 @@ export function BrainPage() {
             <button type="button"
               key={s.id}
               onClick={() => setActiveSection(s.id)}
-              className={`flex items-center gap-2.5 w-full px-3 h-8 text-xs transition-colors ${
+              className={`flex items-center gap-2.5 w-full px-3 h-9 text-sm transition-colors ${
                 active ? 'text-base-100 bg-accent-muted' : 'text-base-400 hover:text-base-200 hover:bg-base-800/50'
               }`}
             >
               <s.icon className="size-4 shrink-0" />
-              <span className="text-[11px] tracking-wide truncate">{s.label}</span>
+              <span className="text-[14px] tracking-wide truncate">{s.label}</span>
               {active && <span className="ml-auto w-0.5 h-4 rounded-full bg-accent" />}
             </button>
           )
         })}
       </div>
     </nav>
+  )
+
+  const mobileTabs = (
+    <div className="md:hidden flex overflow-x-auto border-b border-base-800 bg-surface shrink-0">
+      {sections.map(s => {
+        const active = activeSection === s.id
+        return (
+          <button type="button"
+            key={s.id}
+            onClick={() => setActiveSection(s.id)}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap shrink-0 transition-colors border-b-2 ${
+              active ? 'text-accent border-accent' : 'text-base-400 border-transparent hover:text-base-200'
+            }`}
+          >
+            <s.icon className="size-3.5 shrink-0" />
+            <span className="text-[13px] font-mono">{s.label}</span>
+          </button>
+        )
+      })}
+    </div>
   )
 
   const renderDashboard = () => (
@@ -571,10 +591,11 @@ export function BrainPage() {
   )
 
   return (
-    <div className="flex h-full">
+    <div className="flex flex-col md:flex-row h-full">
       {sectionNav}
+      {mobileTabs}
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
         {activeSection === 'dashboard' && renderDashboard()}
         {activeSection === 'memories' && renderMemories()}
         {activeSection === 'projects' && renderProjects()}
