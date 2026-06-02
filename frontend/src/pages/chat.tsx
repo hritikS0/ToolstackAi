@@ -46,6 +46,7 @@ export function ChatPage() {
     timerId: null as ReturnType<typeof setTimeout> | null,
   })
   const thinkingMsgInterval = useRef<ReturnType<typeof setInterval> | null>(null)
+  const prevIdRef = useRef(id)
 
   const { data: conversations = [] } = useQuery({
     queryKey: ['conversations'],
@@ -230,7 +231,19 @@ export function ChatPage() {
     e.target.value = ''
   }
 
-  useEffect(() => { setLocalImagePreviews({}) }, [id])
+  const prevIdRef = useRef(id)
+
+  useEffect(() => {
+    if (prevIdRef.current !== id) {
+      prevIdRef.current = id
+      setLocalImagePreviews({})
+      if (!isStreaming) {
+        setOptimisticUserMsg(null)
+        setStreamingContent('')
+        setStreamError(null)
+      }
+    }
+  }, [id, isStreaming])
 
   useEffect(() => {
     if (isStreaming) return
@@ -243,16 +256,7 @@ export function ChatPage() {
         setStreamingContent('')
       }
     }
-    if (optimisticUserMsg) {
-      const confirmed = (messages as Message[]).some(
-        m => m.role === 'user' && m.content === optimisticUserMsg
-      )
-      if (confirmed) {
-        console.log('[chat] server confirmed user message, clearing optimistic state')
-        setOptimisticUserMsg(null)
-      }
-    }
-  }, [messages, isStreaming, streamingContent, optimisticUserMsg])
+  }, [messages, isStreaming, streamingContent])
 
   useEffect(() => {
     if (!isThinking) {
@@ -371,8 +375,9 @@ export function ChatPage() {
                   />
                 ))}
 
-                {optimisticUserMsg && !(messages as Message[]).some(m => m.role === 'user' && m.content === optimisticUserMsg) && (
+                {optimisticUserMsg && (
                   <MessageBlock
+                    key="optimistic-user"
                     role="user"
                     content={optimisticUserMsg}
                     imageUrl={localImagePreviews[optimisticUserMsg] || undefined}
