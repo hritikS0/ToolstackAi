@@ -150,48 +150,49 @@ export function PdfChatPage() {
     <div className="flex h-full">
       <input ref={fileRef} type="file" accept=".pdf" className="hidden" onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
       {showPdfList && (
-        <div className="w-52 border-r border-base-800 bg-surface flex flex-col shrink-0">
-          <div className="h-[37px] border-b border-base-800 flex items-center justify-between px-2">
-            <span className="text-[10px] font-medium text-base-500 uppercase tracking-wider">Documents</span>
-            <Button variant="ghost" size="icon" className="size-5" onClick={() => setShowPdfList(false)}>
-              <X className="size-3" />
-            </Button>
+        <>
+          <div className="md:hidden fixed inset-0 z-40 bg-black/60" onClick={() => setShowPdfList(false)} />
+          <div className="w-52 border-r border-base-800 bg-surface flex flex-col shrink-0 md:flex md:static fixed inset-y-0 left-0 z-50">
+            <div className="h-[37px] border-b border-base-800 flex items-center justify-between px-2">
+              <span className="text-[12px] font-medium text-base-500 uppercase tracking-wider">Documents</span>
+              <Button variant="ghost" size="icon" className="size-5" onClick={() => setShowPdfList(false)}>
+                <X className="size-3" />
+              </Button>
+            </div>
+            <div className="p-1.5">
+              <Button variant="primary" size="sm" className="w-full" onClick={() => { fileRef.current?.click(); setPdfBlobUrl(null); setMessages([]); navigate('/pdf', { replace: true }); setShowPdfList(false) }}>
+                <Upload className="size-3.5" />
+                Upload PDF
+              </Button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-1 pb-1 space-y-0.5">
+              {pdfConversations.map(c => (
+                <button type="button"
+                  key={c.id}
+                  onClick={() => { navigate(`/pdf/${c.id}`); setShowPdfList(false) }}
+                  className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-[2px] text-[13px] text-left group ${
+                    c.id === id ? 'bg-accent-muted text-accent' : 'text-base-500 hover:bg-base-800 hover:text-base-300'
+                  }`}
+                >
+                  <FileText className="size-3.5 shrink-0" />
+                  <span className="truncate flex-1">{truncate(c.title || 'Untitled', 24)}</span>
+                  <span className="text-[12px] text-base-600 shrink-0 font-mono">{formatRelativeTime(c.createdAt)}</span>
+                </button>
+              ))}
+              {pdfConversations.length === 0 && (
+                <p className="text-[13px] text-base-600 text-center py-6">No documents yet</p>
+              )}
+            </div>
           </div>
-          <div className="p-1.5">
-            <Button variant="primary" size="sm" className="w-full" onClick={() => { fileRef.current?.click(); setPdfBlobUrl(null); setMessages([]); navigate('/pdf', { replace: true }) }}>
-              <Upload className="size-3.5" />
-                  Upload PDF
-                </Button>
-                {!showPdfList && (
-                  <Button variant="ghost" size="sm" onClick={() => setShowPdfList(true)}>
-                    Show List
-                  </Button>
-                )}
-              </div>
-          <div className="flex-1 overflow-y-auto px-1 pb-1 space-y-0.5">
-            {pdfConversations.map(c => (
-              <button type="button"
-                key={c.id}
-                onClick={() => navigate(`/pdf/${c.id}`)}
-                className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-[2px] text-[11px] text-left group ${
-                  c.id === id ? 'bg-accent-muted text-accent' : 'text-base-500 hover:bg-base-800 hover:text-base-300'
-                }`}
-              >
-                <FileText className="size-3.5 shrink-0" />
-                <span className="truncate flex-1">{truncate(c.title || 'Untitled', 24)}</span>
-                <span className="text-[9px] text-base-600 shrink-0 font-mono">{formatRelativeTime(c.createdAt)}</span>
-              </button>
-            ))}
-            {pdfConversations.length === 0 && (
-              <p className="text-[11px] text-base-600 text-center py-6">No documents yet</p>
-            )}
-          </div>
-        </div>
+        </>
       )}
       <div className="pdf-split flex-1 flex relative">
         <div className="overflow-hidden border-r border-base-800 flex flex-col" style={{ width: `${splitPos}%` }}>
-          <div className="h-[37px] border-b border-base-800 bg-surface flex items-center px-3 gap-2 shrink-0">
-            <FileText className="size-3.5 text-base-500" />
+              <div className="h-[37px] border-b border-base-800 bg-surface flex items-center px-3 gap-2 shrink-0">
+                <Button variant="ghost" size="sm" onClick={() => setShowPdfList(true)} className="md:hidden px-2 -ml-1">
+                  <FileText className="size-3.5" />
+                </Button>
+                <FileText className="size-3.5 text-base-500 hidden md:block" />
             <span className="text-[11px] text-base-400 font-medium font-mono">
               {(id && !file) ? (docId ? 'Document' : '') : file ? file.name : 'Document Viewer'}
             </span>
@@ -211,8 +212,12 @@ export function PdfChatPage() {
                     <Upload className="size-3.5" />
                     Upload PDF
                   </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setShowPdfList(true)} className="md:hidden">
+                    <FileText className="size-3.5" />
+                    Documents
+                  </Button>
                   {!showPdfList && (
-                    <Button variant="ghost" size="sm" onClick={() => setShowPdfList(true)}>
+                    <Button variant="ghost" size="sm" onClick={() => setShowPdfList(true)} className="hidden md:inline-flex">
                       Show List
                     </Button>
                   )}

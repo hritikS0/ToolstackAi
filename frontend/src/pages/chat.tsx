@@ -281,50 +281,53 @@ export function ChatPage() {
     <div className="flex h-full">
       <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFileChange} />
       {showConvList && (
-        <div className="w-52 border-r border-base-800 bg-surface flex flex-col shrink-0">
-          <div className="h-[37px] border-b border-base-800 flex items-center justify-between px-2">
-            <span className="text-[12px] font-medium text-base-500 uppercase tracking-wider">Conversations</span>
-            <Button variant="ghost" size="icon" className="size-5" onClick={() => setShowConvList(false)}>
-              <X className="size-3" />
-            </Button>
+        <>
+          <div className="md:hidden fixed inset-0 z-40 bg-black/60" onClick={() => setShowConvList(false)} />
+          <div className="w-52 border-r border-base-800 bg-surface flex flex-col shrink-0 md:flex md:static fixed inset-y-0 left-0 z-50">
+            <div className="h-[37px] border-b border-base-800 flex items-center justify-between px-2">
+              <span className="text-[12px] font-medium text-base-500 uppercase tracking-wider">Conversations</span>
+              <Button variant="ghost" size="icon" className="size-5" onClick={() => setShowConvList(false)}>
+                <X className="size-3" />
+              </Button>
+            </div>
+            <div className="p-1.5">
+              <Button variant="secondary" size="sm" className="w-full" onClick={async () => {
+                const res = await chatService.createConversation()
+                if (res.data?.conversation) { navigate(`/chat/${res.data.conversation.id}`); setShowConvList(false) }
+              }}>
+                <Plus className="size-3.5" />
+                New Chat
+              </Button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-1 pb-1 space-y-0.5">
+              {(conversations as Conversation[]).filter(c => c.type !== 'pdf').map(c => (
+                <button type="button"
+                  key={c.id}
+                  onClick={() => { navigate(`/chat/${c.id}`); setShowConvList(false) }}
+                  className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-[2px] text-[13px] text-left group ${
+                    c.id === id ? 'bg-accent-muted text-accent' : 'text-base-500 hover:bg-base-800 hover:text-base-300'
+                  }`}
+                >
+                  <MessageSquare className="size-3.5 shrink-0" />
+                  <span className="truncate flex-1">{c.title || 'New Chat'}</span>
+                  <span className="text-[12px] text-base-600 shrink-0 font-mono">{formatRelativeTime(c.createdAt)}</span>
+                </button>
+              ))}
+              {conversations.length === 0 && (
+                <p className="text-[11px] text-base-600 text-center py-6">No conversations</p>
+              )}
+            </div>
           </div>
-          <div className="p-1.5">
-            <Button variant="secondary" size="sm" className="w-full" onClick={async () => {
-              const res = await chatService.createConversation()
-              if (res.data?.conversation) navigate(`/chat/${res.data.conversation.id}`)
-            }}>
-              <Plus className="size-3.5" />
-              New Chat
-            </Button>
-          </div>
-          <div className="flex-1 overflow-y-auto px-1 pb-1 space-y-0.5">
-            {(conversations as Conversation[]).filter(c => c.type !== 'pdf').map(c => (
-              <button type="button"
-                key={c.id}
-                onClick={() => navigate(`/chat/${c.id}`)}
-                className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-[2px] text-[13px] text-left group ${
-                  c.id === id ? 'bg-accent-muted text-accent' : 'text-base-500 hover:bg-base-800 hover:text-base-300'
-                }`}
-              >
-                <MessageSquare className="size-3.5 shrink-0" />
-                <span className="truncate flex-1">{c.title || 'New Chat'}</span>
-                <span className="text-[12px] text-base-600 shrink-0 font-mono">{formatRelativeTime(c.createdAt)}</span>
-              </button>
-            ))}
-            {conversations.length === 0 && (
-              <p className="text-[11px] text-base-600 text-center py-6">No conversations</p>
-            )}
-          </div>
-        </div>
+        </>
       )}
 
       <div className="flex-1 flex flex-col min-w-0">
         {!id ? (
           <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
+            <div className="text-center px-4">
               <MessageSquare className="size-8 text-base-700 mx-auto mb-3" />
-              <p className="text-[11px] text-base-500 mb-3">Select a conversation or create a new one</p>
-              <div className="flex items-center gap-2 justify-center">
+              <p className="text-[14px] text-base-500 mb-3">Select a conversation or create a new one</p>
+              <div className="flex items-center gap-2 justify-center flex-wrap">
                 <Button variant="primary" size="sm" onClick={async () => {
                   const res = await chatService.createConversation()
                   if (res.data?.conversation) navigate(`/chat/${res.data.conversation.id}`)
@@ -332,8 +335,12 @@ export function ChatPage() {
                   <Plus className="size-3.5" />
                   New Chat
                 </Button>
+                <Button variant="ghost" size="sm" onClick={() => setShowConvList(true)} className="md:hidden">
+                  <MessageSquare className="size-3.5" />
+                  Conversations
+                </Button>
                 {!showConvList && (
-                  <Button variant="ghost" size="sm" onClick={() => setShowConvList(true)}>
+                  <Button variant="ghost" size="sm" onClick={() => setShowConvList(true)} className="hidden md:inline-flex">
                     Show List
                   </Button>
                 )}
@@ -348,6 +355,12 @@ export function ChatPage() {
               </div>
             ) : (
               <div className="max-w-4xl mx-auto py-5 px-5 space-y-5">
+                <div className="md:hidden flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setShowConvList(true)} className="px-2">
+                    <MessageSquare className="size-3.5" />
+                    <span className="text-[12px]">Chats</span>
+                  </Button>
+                </div>
                 {(messages as Message[]).filter(m => {
                   if (optimisticUserMsg && m.role === 'user' && m.content === optimisticUserMsg) return false
                   if (streamingContent && m.role === 'assistant' && m.content === streamingContent) return false
