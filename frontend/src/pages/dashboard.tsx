@@ -77,7 +77,7 @@ export function DashboardPage() {
               </div>
             </div>
           </div>
-        ) : dashLoading ? (
+        ) : (dashLoading || !d) ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="size-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
           </div>
