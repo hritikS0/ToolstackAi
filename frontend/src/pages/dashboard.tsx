@@ -33,12 +33,13 @@ export function DashboardPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  const { data: d, isLoading: dashLoading } = useQuery({
+  const { data, isLoading: dashLoading } = useQuery({
     queryKey: ['dashboard'],
     queryFn: async () => (await dashboardService.get()).data,
   })
 
-  const isEmpty = !dashLoading && (!d || (d.stats.conversations === 0 && d.stats.memories === 0 && d.stats.images === 0 && d.stats.debugSessions === 0))
+  const d = data!
+  const isEmpty = !dashLoading && (!data || (data.stats.conversations === 0 && data.stats.memories === 0 && data.stats.images === 0 && data.stats.debugSessions === 0))
   const firstName = user?.fullName?.split(' ')[0] || 'developer'
 
   return (
@@ -77,7 +78,7 @@ export function DashboardPage() {
               </div>
             </div>
           </div>
-        ) : (dashLoading || !d) ? (
+        ) : (dashLoading || !data) ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="size-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
           </div>
