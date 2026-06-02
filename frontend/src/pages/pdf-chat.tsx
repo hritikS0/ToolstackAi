@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import ReactMarkdown from 'react-markdown'
@@ -16,6 +16,7 @@ import type { Message, Conversation } from '@/types/api'
 export function PdfChatPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const queryClient = useQueryClient()
   const [file, setFile] = useState<File | null>(null)
   const [docId, setDocId] = useState<string | null>(null)
@@ -30,6 +31,19 @@ export function PdfChatPage() {
   const dragging = useRef(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const [showPdfList, setShowPdfList] = useState(true)
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    if (params.get('upload') === 'true') {
+      setFile(null)
+      setPdfBlobUrl(null)
+      setMessages([])
+      setTimeout(() => {
+        fileRef.current?.click()
+      }, 100)
+      navigate('/pdf', { replace: true })
+    }
+  }, [location.search, navigate])
 
   const { data: conversations = [] } = useQuery({
     queryKey: ['conversations'],

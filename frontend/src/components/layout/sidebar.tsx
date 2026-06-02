@@ -1,240 +1,284 @@
 import { useState } from 'react'
-import { useNavigate, useParams, useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { projectService } from '@/services/project.service'
-import { chatService } from '@/services/chat.service'
-import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import type { Project, Thread } from '@/types/api'
 import {
-  FolderOpen, ChevronRight, MessageSquare, Plus, MoreHorizontal,
-  Pencil, Trash2, Hash
+  MessageSquare, FileText, Image, Bug, History, Settings,
+  PanelLeftClose, PanelLeft, Palette, BrainCircuit, Images,
+  ChevronDown, ChevronRight, Plus
 } from 'lucide-react'
+import { chatService } from '@/services/chat.service'
+import type { Conversation } from '@/types/api'
 
-interface Props {
-  collapsed: boolean
-  onToggle: () => void
-  onThemeClick: () => void
-}
+const navItems = [
+  { icon: Image, label: 'Image Analysis', path: '/image' },
+  { icon: Images, label: 'Media', path: '/media' },
+  { icon: Bug, label: 'Debug', path: '/debug' },
+  { icon: BrainCircuit, label: 'Brain', path: '/brain' },
+  { icon: History, label: 'History', path: '/conversations' },
+  { icon: Settings, label: 'Settings', path: '/settings' },
+]
 
-export function Sidebar({ collapsed, onToggle, onThemeClick }: Props) {
-  const navigate = useNavigate()
+export function Sidebar({ collapsed, onToggle, onThemeClick }: { collapsed: boolean; onToggle: () => void; onThemeClick: () => void }) {
   const location = useLocation()
-  const { id: chatId } = useParams()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set())
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editName, setEditName] = useState('')
-  const [creatingProject, setCreatingProject] = useState(false)
-  const [newProjectName, setNewProjectName] = useState('')
-  const [creatingThread, setCreatingThread] = useState<string | null>(null)
-  const [newThreadTitle, setNewThreadTitle] = useState('')
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; type: 'project' | 'thread'; id: string } | null>(null)
 
-  const { data: projects = [] } = useQuery({
-    queryKey: ['projects'],
-    queryFn: () => projectService.getAll(),
+  const [chatExpanded, setChatExpanded] = useState(true)
+  const [pdfExpanded, setPdfExpanded] = useState(true)
+
+  const currentPath = '/' + location.pathname.split('/').filter(Boolean)[0]
+  const activeSubId = location.pathname.split('/')[2]
+
+  const { data: conversations = [] } = useQuery({
+    queryKey: ['conversations'],
+    queryFn: async () => (await chatService.getConversations()).data || [],
   })
 
-  const toggleProject = (id: string) => {
-    setExpandedProjects(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
+  const chatConversations = (conversations as Conversation[]).filter(c => c.type === 'chat' || !c.type)
+  const pdfConversations = (conversations as Conversation[]).filter(c => c.type === 'pdf')
+
+  const handleNewChat = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      const res = await chatService.createConversation()
+      if (res.success) {
+        queryClient.invalidateQueries({ queryKey: ['conversations'] })
+        navigate(`/chat/${res.data.conversation.id}`)
+      }
+    } catch {}
   }
 
-  const handleCreateProject = async () => {
-    if (!newProjectName.trim()) return
-    await projectService.create({ name: newProjectName.trim() })
-    queryClient.invalidateQueries({ queryKey: ['projects'] })
-    setNewProjectName('')
-    setCreatingProject(false)
-  }
-
-  const handleCreateThread = async (projectId: string) => {
-    if (!newThreadTitle.trim()) return
-    const thread = await projectService.createThread({ projectId, title: newThreadTitle.trim() })
-    const conv = await chatService.createConversation({ title: newThreadTitle.trim() })
-    if (conv.data?.conversation) {
-      await projectService.linkConversation(conv.data.conversation.id, thread.id)
-      queryClient.invalidateQueries({ queryKey: ['projects'] })
-      navigate(`/chat/${conv.data.conversation.id}`)
-    }
-    setNewThreadTitle('')
-    setCreatingThread(null)
-  }
-
-  const handleRename = async (type: 'project' | 'thread', id: string) => {
-    if (!editName.trim()) return
-    if (type === 'project') await projectService.update(id, { name: editName.trim() })
-    else await projectService.updateThread(id, { title: editName.trim() })
-    queryClient.invalidateQueries({ queryKey: ['projects'] })
-    setEditingId(null)
-    setEditName('')
-  }
-
-  const handleDelete = async (type: 'project' | 'thread', id: string) => {
-    if (type === 'project') await projectService.delete(id)
-    else await projectService.deleteThread(id)
-    queryClient.invalidateQueries({ queryKey: ['projects'] })
-    setContextMenu(null)
-  }
-
-  const startEdit = (type: 'project' | 'thread', id: string, currentName: string) => {
-    setEditingId(`${type}-${id}`)
-    setEditName(currentName)
-    setContextMenu(null)
+  const handleNewPdf = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    navigate('/pdf?upload=true')
   }
 
   return (
     <div className={cn(
       'h-screen bg-sidebar border-r border-sidebar-border flex flex-col shrink-0 transition-all duration-100',
-      collapsed ? 'w-[52px]' : 'w-[240px]',
+      collapsed ? 'w-[52px]' : 'w-[220px]',
     )}>
+      {/* Brand Header */}
       <div className={cn(
         'flex items-center border-b border-sidebar-border h-[41px] shrink-0',
         collapsed ? 'justify-center px-0' : 'px-3',
       )}>
         {!collapsed && (
-          <span className="text-[14px] font-medium text-accent tracking-wider uppercase cursor-pointer select-none"
-            onClick={() => navigate('/dashboard')}
+          <span className="text-[14px] font-semibold text-accent tracking-wider uppercase cursor-pointer select-none font-mono" 
+          onClick={() => navigate('/dashboard')}
           >ToolStack</span>
         )}
         <div className={collapsed ? '' : 'flex-1'} />
         <button type="button"
           onClick={onToggle}
           className="size-7 rounded-[4px] flex items-center justify-center text-base-500 hover:text-base-300 hover:bg-base-800 transition-colors"
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          <ChevronRight className={cn('size-4 transition-transform', !collapsed && 'rotate-180')} />
+          {collapsed ? <PanelLeft className="size-3.5" /> : <PanelLeftClose className="size-3.5" />}
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-1">
-        {!collapsed && (
-          <div className="px-2 pb-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start text-[13px] text-base-400 hover:text-base-200"
-              onClick={() => setCreatingProject(true)}
-            >
-              <Plus className="size-3.5 mr-2" />
-              New Project
-            </Button>
-          </div>
-        )}
-
-        {creatingProject && !collapsed && (
-          <div className="px-2 pb-1">
-            <input
-              autoFocus
-              value={newProjectName}
-              onChange={e => setNewProjectName(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleCreateProject(); if (e.key === 'Escape') setCreatingProject(false) }}
-              onBlur={() => { if (!newProjectName.trim()) setCreatingProject(false); else handleCreateProject() }}
-              placeholder="Project name..."
-              className="w-full h-7 rounded-[2px] border border-accent/40 bg-base-950 px-2 text-[13px] font-mono text-base-200 outline-none"
-            />
-          </div>
-        )}
-
-        {projects.map(project => {
-          const isExpanded = expandedProjects.has(project.id)
-          const threads = project.threads || []
-
-          return (
-            <div key={project.id} className="mb-0.5">
-              <button type="button"
-                onClick={() => collapsed ? navigate(`/projects/${project.id}`) : toggleProject(project.id)}
-                onContextMenu={e => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, type: 'project', id: project.id }) }}
+      {/* Main Navigation */}
+      <nav className="flex-1 py-2 overflow-y-auto space-y-4">
+        
+        {/* Expanded Expandable Sections */}
+        {!collapsed ? (
+          <div className="space-y-3 px-2">
+            {/* Chat Group */}
+            <div className="space-y-1">
+              <div 
+                onClick={() => navigate('/chat')}
                 className={cn(
-                  'flex items-center gap-2 w-full text-left transition-colors group',
-                  collapsed ? 'justify-center h-10' : 'px-3 h-9',
-                  'text-base-400 hover:text-base-200 hover:bg-base-800/50',
+                  "group flex items-center justify-between h-7 px-2 rounded-[4px] text-[11px] font-semibold text-base-400 hover:text-base-200 hover:bg-base-800/40 cursor-pointer select-none transition-colors",
+                  location.pathname === '/chat' && "bg-base-800/60 text-base-100"
                 )}
               >
-                <FolderOpen className="size-4 shrink-0" style={{ color: project.color }} />
-                {!collapsed && (
-                  <>
-                    {editingId === `project-${project.id}` ? (
-                      <input
-                        autoFocus
-                        value={editName}
-                        onChange={e => setEditName(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') handleRename('project', project.id); if (e.key === 'Escape') setEditingId(null) }}
-                        onBlur={() => handleRename('project', project.id)}
-                        className="flex-1 bg-transparent text-[13px] font-mono text-base-200 outline-none border-b border-accent/40"
-                      />
-                    ) : (
-                      <span className="flex-1 truncate text-[13px] font-mono">{project.name}</span>
-                    )}
-                    <ChevronRight className={cn('size-3.5 shrink-0 transition-transform', isExpanded && 'rotate-90')} />
-                  </>
-                )}
-              </button>
-
-              {isExpanded && !collapsed && (
-                <div className="ml-3 border-l border-base-800/50 pl-3">
-                  {threads.map(thread => (
-                    <div key={thread.id} className="group/thread relative">
-                      <button type="button"
-                        onClick={() => {
-                          const conv = thread.conversations?.[0]
-                          if (conv) navigate(`/chat/${conv.id}`)
-                        }}
-                        onContextMenu={e => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, type: 'thread', id: thread.id }) }}
-                        className={cn(
-                          'flex items-center gap-2 w-full h-8 px-3 text-left transition-colors rounded-[2px]',
-                          thread.conversations?.[0]?.id === chatId
-                            ? 'text-accent bg-accent-muted'
-                            : 'text-base-400 hover:text-base-200 hover:bg-base-800/50',
-                        )}
-                      >
-                        <Hash className="size-3.5 shrink-0" />
-                        {editingId === `thread-${thread.id}` ? (
-                          <input
-                            autoFocus
-                            value={editName}
-                            onChange={e => setEditName(e.target.value)}
-                            onKeyDown={e => { if (e.key === 'Enter') handleRename('thread', thread.id); if (e.key === 'Escape') setEditingId(null) }}
-                            onBlur={() => handleRename('thread', thread.id)}
-                            className="flex-1 bg-transparent text-[13px] font-mono text-base-200 outline-none border-b border-accent/40"
-                          />
-                        ) : (
-                          <span className="flex-1 truncate text-[13px] font-mono">{thread.title}</span>
-                        )}
-                      </button>
-                    </div>
-                  ))}
-                  <button type="button"
-                    onClick={() => setCreatingThread(project.id)}
-                    className="flex items-center gap-2 w-full h-8 px-3 text-[12px] text-base-600 hover:text-base-400 transition-colors"
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <button 
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setChatExpanded(!chatExpanded)
+                    }}
+                    className="p-0.5 rounded hover:bg-base-700 text-base-500 hover:text-base-300 transition-colors"
                   >
-                    <Plus className="size-3 shrink-0" />
-                    New thread
+                    {chatExpanded ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
                   </button>
-                  {creatingThread === project.id && (
-                    <div className="px-3 pb-1">
-                      <input
-                        autoFocus
-                        value={newThreadTitle}
-                        onChange={e => setNewThreadTitle(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') handleCreateThread(project.id); if (e.key === 'Escape') setCreatingThread(null) }}
-                        onBlur={() => { if (!newThreadTitle.trim()) setCreatingThread(null); else handleCreateThread(project.id) }}
-                        placeholder="Thread title..."
-                        className="w-full h-7 rounded-[2px] border border-accent/40 bg-base-950 px-2 text-[12px] font-mono text-base-200 outline-none"
-                      />
-                    </div>
+                  <MessageSquare className="size-3.5 text-base-400" />
+                  <span className="font-mono truncate uppercase tracking-wider">Chat</span>
+                </div>
+                <button 
+                  type="button"
+                  onClick={handleNewChat}
+                  className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-base-700 text-base-400 hover:text-accent transition-all"
+                  title="New Chat"
+                >
+                  <Plus className="size-3" />
+                </button>
+              </div>
+
+              {chatExpanded && (
+                <div className="pl-4 space-y-0.5 border-l border-base-850/60 ml-3.5 mt-0.5">
+                  {chatConversations.slice(0, 15).map(c => {
+                    const active = activeSubId === c.id
+                    return (
+                      <button
+                        type="button"
+                        key={c.id}
+                        onClick={() => navigate(`/chat/${c.id}`)}
+                        className={cn(
+                          "w-full text-left truncate px-2 py-1 rounded text-[12px] font-mono transition-all block",
+                          active 
+                            ? "bg-accent-muted text-accent font-medium" 
+                            : "text-base-400 hover:text-base-200 hover:bg-base-800/40"
+                        )}
+                        title={c.title || 'Conversation'}
+                      >
+                        • {c.title || 'Conversation'}
+                      </button>
+                    )
+                  })}
+                  {chatConversations.length === 0 && (
+                    <span className="text-[10px] text-base-600 italic px-2 block font-mono">No recent chats</span>
                   )}
                 </div>
               )}
             </div>
-          )
-        })}
-      </div>
 
+            {/* PDF Chat Group */}
+            <div className="space-y-1">
+              <div 
+                onClick={() => navigate('/pdf')}
+                className={cn(
+                  "group flex items-center justify-between h-7 px-2 rounded-[4px] text-[11px] font-semibold text-base-400 hover:text-base-200 hover:bg-base-800/40 cursor-pointer select-none transition-colors",
+                  location.pathname === '/pdf' && "bg-base-800/60 text-base-100"
+                )}
+              >
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <button 
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setPdfExpanded(!pdfExpanded)
+                    }}
+                    className="p-0.5 rounded hover:bg-base-700 text-base-500 hover:text-base-300 transition-colors"
+                  >
+                    {pdfExpanded ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
+                  </button>
+                  <FileText className="size-3.5 text-base-400" />
+                  <span className="font-mono truncate uppercase tracking-wider">PDF Chat</span>
+                </div>
+                <button 
+                  type="button"
+                  onClick={handleNewPdf}
+                  className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-base-700 text-base-400 hover:text-accent transition-all"
+                  title="Upload PDF"
+                >
+                  <Plus className="size-3" />
+                </button>
+              </div>
+
+              {pdfExpanded && (
+                <div className="pl-4 space-y-0.5 border-l border-base-850/60 ml-3.5 mt-0.5">
+                  {pdfConversations.slice(0, 15).map(c => {
+                    const active = activeSubId === c.id
+                    return (
+                      <button
+                        type="button"
+                        key={c.id}
+                        onClick={() => navigate(`/pdf/${c.id}`)}
+                        className={cn(
+                          "w-full text-left truncate px-2 py-1 rounded text-[12px] font-mono transition-all block",
+                          active 
+                            ? "bg-accent-muted text-accent font-medium" 
+                            : "text-base-400 hover:text-base-200 hover:bg-base-800/40"
+                        )}
+                        title={c.title || 'Document'}
+                      >
+                        • {c.title || 'Document'}
+                      </button>
+                    )
+                  })}
+                  {pdfConversations.length === 0 && (
+                    <span className="text-[10px] text-base-600 italic px-2 block font-mono">No documents</span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* Collapsed Icons for Chat & PDF Chat */
+          <div className="space-y-1.5">
+            <button type="button"
+              onClick={() => navigate('/chat')}
+              className={cn(
+                'flex items-center justify-center w-full h-10 text-sm transition-colors relative group',
+                currentPath === '/chat' ? 'text-base-100 bg-accent-muted' : 'text-base-400 hover:text-base-200 hover:bg-base-800/50'
+              )}
+              title="Chat"
+            >
+              <MessageSquare className="size-4 shrink-0" />
+              <div className="absolute rounded-full bg-accent left-0.5 top-1/2 -translate-y-1/2 w-0.5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute left-full ml-2 px-2 py-1 rounded-[4px] bg-base-900 border border-base-800 text-[13px] text-base-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 pointer-events-none">
+                Chat
+              </div>
+            </button>
+
+            <button type="button"
+              onClick={() => navigate('/pdf')}
+              className={cn(
+                'flex items-center justify-center w-full h-10 text-sm transition-colors relative group',
+                currentPath === '/pdf' ? 'text-base-100 bg-accent-muted' : 'text-base-400 hover:text-base-200 hover:bg-base-800/50'
+              )}
+              title="PDF Chat"
+            >
+              <FileText className="size-4 shrink-0" />
+              <div className="absolute rounded-full bg-accent left-0.5 top-1/2 -translate-y-1/2 w-0.5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute left-full ml-2 px-2 py-1 rounded-[4px] bg-base-900 border border-base-800 text-[13px] text-base-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 pointer-events-none">
+                PDF Chat
+              </div>
+            </button>
+          </div>
+        )}
+
+        {/* Regular Sidebar Links */}
+        <div className={cn("space-y-0.5", !collapsed && "pt-2 border-t border-sidebar-border/40 mx-2")}>
+          {navItems.map(item => {
+            const active = currentPath === item.path
+            return (
+              <button type="button"
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                className={cn(
+                  'flex items-center gap-2.5 w-full text-sm transition-colors relative group',
+                  collapsed ? 'justify-center h-10' : 'px-3 h-9 rounded-[4px]',
+                  active
+                    ? 'text-base-100 bg-accent-muted'
+                    : 'text-base-400 hover:text-base-200 hover:bg-base-800/50',
+                )}
+                title={collapsed ? item.label : undefined}
+              >
+                <item.icon className="size-4 shrink-0" />
+                {!collapsed && <span className="truncate text-[13px] font-mono tracking-wide">{item.label}</span>}
+                {active && (
+                  <span className={cn(
+                    'absolute rounded-full bg-accent',
+                    collapsed ? 'left-0.5 top-1/2 -translate-y-1/2 w-0.5 h-5' : 'left-0 top-1/2 -translate-y-1/2 w-0.5 h-5',
+                  )} />
+                )}
+                {collapsed && (
+                  <div className="absolute left-full ml-2 px-2 py-1 rounded-[4px] bg-base-900 border border-base-800 text-[13px] text-base-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 pointer-events-none">
+                    {item.label}
+                  </div>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </nav>
+
+      {/* Footer / Theme Trigger */}
       <div className="border-t border-sidebar-border py-1">
         <button type="button"
           onClick={onThemeClick}
@@ -243,36 +287,17 @@ export function Sidebar({ collapsed, onToggle, onThemeClick }: Props) {
             collapsed ? 'justify-center h-10' : 'px-3 h-9',
             'text-base-400 hover:text-base-200 hover:bg-base-800/50',
           )}
+          title={collapsed ? 'Theme' : undefined}
         >
-          <span className="size-4 shrink-0 flex items-center justify-center">🎨</span>
-          {!collapsed && <span className="truncate text-[13px] tracking-wide">Theme</span>}
+          <Palette className="size-4 shrink-0" />
+          {!collapsed && <span className="truncate text-[13px] font-mono tracking-wide">Theme</span>}
+          {collapsed && (
+            <div className="absolute left-full ml-2 px-2 py-1 rounded-[4px] bg-base-900 border border-base-800 text-[13px] text-base-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 pointer-events-none">
+              Theme
+            </div>
+          )}
         </button>
       </div>
-
-      {contextMenu && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} />
-          <div className="fixed z-50 w-40 rounded-[4px] border border-base-800 bg-surface shadow-xl py-1"
-            style={{ left: contextMenu.x, top: contextMenu.y }}
-          >
-            <button type="button"
-              onClick={() => startEdit(contextMenu.type, contextMenu.id, '')}
-              className="flex items-center gap-2 w-full px-3 py-1.5 text-[13px] text-base-400 hover:text-base-200 hover:bg-base-800 transition-colors"
-            >
-              <Pencil className="size-3.5" />
-              Rename
-            </button>
-            <div className="border-t border-base-800 my-0.5" />
-            <button type="button"
-              onClick={() => handleDelete(contextMenu.type, contextMenu.id)}
-              className="flex items-center gap-2 w-full px-3 py-1.5 text-[13px] text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
-            >
-              <Trash2 className="size-3.5" />
-              Delete
-            </button>
-          </div>
-        </>
-      )}
     </div>
   )
 }
