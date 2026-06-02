@@ -114,7 +114,7 @@ export function SettingsPage() {
         </div>
 
         <div className="flex flex-col md:flex-row gap-6">
-          <nav className="flex md:flex-col overflow-x-auto md:overflow-x-visible no-scrollbar pb-3 md:pb-0 w-full md:w-60 shrink-0 gap-1 border-b border-base-800 md:border-b-0 md:sticky md:top-0 md:self-start" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          <nav className="flex md:flex-col overflow-x-auto md:overflow-x-visible no-scrollbar pt-4 pb-3 md:pt-0 md:pb-0 w-full md:w-60 shrink-0 gap-1 border-b border-base-800 md:border-b-0 sticky top-[-16px] md:top-0 z-10 bg-workspace" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             {sections.map(s => (
               <button type="button" key={s.id} onClick={() => setActive(s.id)}
                 className={`flex items-center gap-2.5 px-3 py-2 rounded-[4px] text-[12px] transition-colors font-mono shrink-0 whitespace-nowrap ${

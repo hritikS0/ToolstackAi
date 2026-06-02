@@ -37,6 +37,12 @@
   scrollbar-color: #2a2a2a transparent;
 }
 
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   margin: 0;
   padding: 0;
