@@ -27,7 +27,32 @@ export interface Conversation {
   title: string | null
   type?: string
   userId: string
+  threadId?: string | null
   createdAt: string
+}
+
+export interface Project {
+  id: string
+  userId: string
+  name: string
+  description: string
+  icon: string
+  color: string
+  threads: Thread[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Thread {
+  id: string
+  userId: string
+  projectId: string
+  title: string
+  description: string
+  project?: Project
+  conversations: Conversation[]
+  createdAt: string
+  updatedAt: string
 }
 
 export interface Message {

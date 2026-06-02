@@ -41,6 +41,7 @@ import apiKeysRoutes from "./features/api-keys/api-keys.routes.js";
 import dashboardRoutes from "./features/dashboard/dashboard.routes.js";
 import mediaRoutes from "./features/media/media.routes.js";
 import filesRoutes from "./features/files/files.routes.js";
+import projectRoutes from "./features/projects/project.routes.js";
 
 app.use("/api/auth", authRoutes);
 app.use("/api/chat", conversationRoutes);
@@ -53,6 +54,7 @@ app.use("/api/keys", apiKeysRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/media", mediaRoutes);
 app.use("/api/files", filesRoutes);
+app.use("/api/projects", projectRoutes);
 
 app.use(errorHandler);
 
