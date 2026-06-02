@@ -38,15 +38,27 @@ export function DashboardPage() {
     queryFn: async () => (await dashboardService.get()).data,
   })
 
-  const d = data!
-  const isEmpty = !dashLoading && (!data || (data.stats.conversations === 0 && data.stats.memories === 0 && data.stats.images === 0 && data.stats.debugSessions === 0))
   const firstName = user?.fullName?.split(' ')[0] || 'developer'
 
-  return (
-    <div className="h-full overflow-y-auto">
-      <div className="h-full flex flex-col">
+  if (dashLoading || !data) {
+    return (
+      <div className="h-full overflow-y-auto">
+        <div className="h-full flex flex-col">
+          <div className="flex-1 flex items-center justify-center">
+            <div className="size-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          </div>
+        </div>
+      </div>
+    )
+  }
 
-        {isEmpty ? (
+  const d = data
+  const isEmpty = d.stats.conversations === 0 && d.stats.memories === 0 && d.stats.images === 0 && d.stats.debugSessions === 0
+
+  if (isEmpty) {
+    return (
+      <div className="h-full overflow-y-auto">
+        <div className="h-full flex flex-col">
           <div className="flex-1 flex items-center justify-center px-4">
             <div className="text-center max-w-lg">
               <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-[4px] border border-base-800 text-[10px] text-base-500 mb-6 font-mono">
@@ -54,9 +66,7 @@ export function DashboardPage() {
                 developer operating system
               </div>
 
-              <h1 className="text-4xl font-bold tracking-tight text-base-100 mb-2 font-mono"
-            
-              >
+              <h1 className="text-4xl font-bold tracking-tight text-base-100 mb-2 font-mono">
                 ToolStack<span className="text-accent">AI</span>
               </h1>
 
@@ -78,12 +88,15 @@ export function DashboardPage() {
               </div>
             </div>
           </div>
-        ) : (dashLoading || !data) ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="size-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : (
-          <div className="p-4 space-y-4">
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="h-full overflow-y-auto">
+      <div className="h-full flex flex-col">
+        <div className="p-4 space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-sm font-medium text-base-100 font-mono">Dashboard</h1>
@@ -280,7 +293,6 @@ export function DashboardPage() {
               </div>
             </div>
           </div>
-        )}
       </div>
     </div>
   )
