@@ -8,6 +8,58 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('toolstack-theme');
+          if (saved) {
+            var theme = JSON.parse(saved);
+            var c = theme.colors;
+            var root = document.documentElement;
+            
+            root.style.setProperty('--color-workspace', c.background);
+            root.style.setProperty('--color-surface', c.surface);
+            root.style.setProperty('--color-surface-alt', c.surfaceAlt);
+            root.style.setProperty('--color-sidebar', c.sidebar);
+            root.style.setProperty('--color-sidebar-border', c.sidebarBorder);
+            root.style.setProperty('--color-accent', c.accent);
+            root.style.setProperty('--color-accent-hover', c.accentHover);
+            root.style.setProperty('--color-accent-muted', c.accentMuted);
+            
+            root.style.setProperty('--color-base-50', c.base50);
+            root.style.setProperty('--color-base-100', c.base100);
+            root.style.setProperty('--color-base-200', c.base200);
+            root.style.setProperty('--color-base-300', c.base300);
+            root.style.setProperty('--color-base-400', c.base400);
+            root.style.setProperty('--color-base-500', c.base500);
+            root.style.setProperty('--color-base-600', c.base600);
+            root.style.setProperty('--color-base-700', c.base700);
+            root.style.setProperty('--color-base-800', c.base800);
+            root.style.setProperty('--color-base-900', c.base900);
+            root.style.setProperty('--color-base-950', c.base950);
+            
+            root.style.setProperty('--font-mono', theme.typography.fontFamily);
+            root.style.setProperty('--font-sans', theme.typography.fontFamily);
+            root.style.fontSize = theme.typography.fontSize;
+            
+            var radii = theme.borderRadius === 'sharp' ? '2px' : theme.borderRadius === 'medium' ? '4px' : '6px';
+            root.style.setProperty('--radius-sm', radii);
+            root.style.setProperty('--radius-md', radii);
+            root.style.setProperty('--radius-lg', theme.borderRadius === 'rounded' ? '8px' : radii);
+            
+            var densityMap = { compact: '1.5', comfortable: '1.6', spacious: '1.8' };
+            root.style.setProperty('--density-line-height', densityMap[theme.density]);
+            
+            var hex = c.accent.replace('#', '');
+            var r = parseInt(hex.substring(0, 2), 16);
+            var g = parseInt(hex.substring(2, 4), 16);
+            var b = parseInt(hex.substring(4, 6), 16);
+            root.style.setProperty('--color-accent-rgb', r + ', ' + g + ', ' + b);
+            root.style.setProperty('--color-accent-soft', 'rgba(' + r + ', ' + g + ', ' + b + ', 0.15)');
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
