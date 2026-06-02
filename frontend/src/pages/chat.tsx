@@ -376,7 +376,7 @@ export function ChatPage() {
                   />
                 )}
 
-                {!isStreaming && streamingContent && !(messages as Message[]).some(m => m.role === 'assistant' && m.content === streamingContent) && (
+                {!isStreaming && streamingContent && (
                   <MessageBlock
                     role="assistant"
                     content={streamingContent}
