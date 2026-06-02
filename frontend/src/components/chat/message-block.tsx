@@ -77,7 +77,7 @@ function AssistantMessage({
         {showThinking ? (
           <ThinkingContent message={thinkingMessage || 'Thinking...'} />
         ) : hasContent ? (
-          <div className={cn('thinking-fade-in', isStreaming && 'streaming-in')}>
+          <div className={cn((isStreaming || isThinking) && 'thinking-fade-in', isStreaming && 'streaming-in')}>
             <div className="prose prose-invert max-w-none text-[12px] leading-relaxed">
               <ReactMarkdown
                 rehypePlugins={[rehypeHighlight]}

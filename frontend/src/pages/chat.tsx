@@ -165,11 +165,8 @@ export function ChatPage() {
         if (thinkingRef.current.timerId) clearTimeout(thinkingRef.current.timerId)
         thinkingRef.current.active = false
         setIsThinking(false)
-        await queryClient.invalidateQueries({ queryKey: ['messages', convId] })
+        queryClient.invalidateQueries({ queryKey: ['messages', convId] })
         queryClient.invalidateQueries({ queryKey: ['conversations'] })
-        console.log('[chat] vision refetch done, clearing optimistic state')
-        setStreamingContent('')
-        setOptimisticUserMsg(null)
       }
       return
     }
@@ -202,7 +199,7 @@ export function ChatPage() {
         : err instanceof Error ? err.message : 'Connection failed.'
       setStreamError(errMsg)
     } finally {
-      console.log('[chat] stream complete, refetching messages', { failed, hasContent: !!fullContent })
+      console.log('[chat] stream complete', { failed, hasContent: !!fullContent })
       setIsStreaming(false)
       if (thinkingRef.current.timerId) clearTimeout(thinkingRef.current.timerId)
       thinkingRef.current.active = false
@@ -215,14 +212,8 @@ export function ChatPage() {
         setStreamingContent('')
       }
 
-      await queryClient.invalidateQueries({ queryKey: ['messages', convId] })
+      queryClient.invalidateQueries({ queryKey: ['messages', convId] })
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
-      console.log('[chat] refetch done, clearing optimistic state')
-
-      if (!failed || fullContent) {
-        setStreamingContent('')
-        setOptimisticUserMsg(null)
-      }
     }
   }
 
@@ -239,6 +230,28 @@ export function ChatPage() {
   }
 
   useEffect(() => { setLocalImagePreviews({}) }, [id])
+
+  useEffect(() => {
+    if (isStreaming) return
+    if (streamingContent) {
+      const confirmed = (messages as Message[]).some(
+        m => m.role === 'assistant' && m.content === streamingContent
+      )
+      if (confirmed) {
+        console.log('[chat] server confirmed assistant message, clearing local state')
+        setStreamingContent('')
+      }
+    }
+    if (optimisticUserMsg) {
+      const confirmed = (messages as Message[]).some(
+        m => m.role === 'user' && m.content === optimisticUserMsg
+      )
+      if (confirmed) {
+        console.log('[chat] server confirmed user message, clearing optimistic state')
+        setOptimisticUserMsg(null)
+      }
+    }
+  }, [messages, isStreaming, streamingContent, optimisticUserMsg])
 
   useEffect(() => {
     if (!isThinking) {
@@ -337,7 +350,7 @@ export function ChatPage() {
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto bg-workspace">
-            {isLoading && messages.length === 0 && !optimisticUserMsg && !isStreaming && !isThinking ? (
+            {isLoading && messages.length === 0 && !optimisticUserMsg && !isStreaming && !isThinking && !streamingContent ? (
               <div className="flex items-center justify-center h-full">
                 <Loader2 className="size-4 animate-spin text-base-500" />
               </div>
@@ -345,7 +358,7 @@ export function ChatPage() {
               <div className="max-w-4xl mx-auto py-4 px-4 space-y-4">
                 {(messages as Message[]).filter(m => {
                   if (optimisticUserMsg && m.role === 'user' && m.content === optimisticUserMsg) return false
-                  if (!isStreaming && streamingContent && m.role === 'assistant' && m.content === streamingContent) return false
+                  if (streamingContent && m.role === 'assistant' && m.content === streamingContent) return false
                   return true
                 }).map(msg => (
                   <MessageBlock
@@ -365,21 +378,15 @@ export function ChatPage() {
                   />
                 )}
 
-                {isStreaming && (
+                {(isStreaming || streamingContent) && (
                   <MessageBlock
+                    key="live-response"
                     role="assistant"
                     content={streamingContent}
-                    isStreaming
+                    isStreaming={isStreaming}
                     isThinking={isThinking}
                     thinkingMessage={thinkingMessage}
-                    timestamp={streamingContent ? undefined : ''}
-                  />
-                )}
-
-                {!isStreaming && streamingContent && (
-                  <MessageBlock
-                    role="assistant"
-                    content={streamingContent}
+                    timestamp={isStreaming && streamingContent ? undefined : ''}
                   />
                 )}
 
