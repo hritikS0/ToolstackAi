@@ -5,13 +5,16 @@ import { imageAnalysisPrompt } from "../../ai/prompts/prompts.js";
 import { logger } from "../../shared/utils/logger.js";
 import { handleAIError } from "../../shared/utils/ai-error-handler.js";
 import { saveMedia } from "../media/media.service.js";
+import { getUserKey } from "../api-keys/api-keys.service.js";
 
 const NVIDIA_VISION_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 
-function getApiKey(): string {
-  const key = process.env.NVIDIA_API_KEY;
-  if (!key) throw Object.assign(new Error("NVIDIA_API_KEY not configured"), { statusCode: 500 });
-  return key;
+async function getApiKeyForUser(userId: string): Promise<string> {
+  const userKey = await getUserKey(userId, "nvidia");
+  if (userKey) return userKey;
+  const envKey = process.env.NVIDIA_API_KEY;
+  if (envKey) return envKey;
+  throw Object.assign(new Error("NVIDIA API key not configured \u2014 add your key in Settings \u2192 API Keys"), { statusCode: 500 });
 }
 
 interface ImageAnalysisResult {
@@ -26,7 +29,7 @@ export async function analyzeImageService(
   userId: string,
 ): Promise<ImageAnalysisResult> {
   const prisma = getPrismaClient();
-  const apiKey = getApiKey();
+  const apiKey = await getApiKeyForUser(userId);
   const model = process.env.NVIDIA_VISION_MODEL || "nvidia/nemotron-nano-12b-v2-vl";
 
   const fileBuffer = await fs.readFile(file.path);

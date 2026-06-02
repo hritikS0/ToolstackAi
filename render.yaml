@@ -15,6 +15,18 @@ services:
         fromDatabase:
           name: toolstack-ai-db
           property: connectionString
+      - key: NVIDIA_API_KEY
+        value: nvapi-placeholder
+      - key: NVIDIA_CHAT_MODEL
+        value: meta/llama-3.1-8b-instruct
+      - key: NVIDIA_VISION_MODEL
+        value: nvidia/nemotron-nano-12b-v2-vl
+      - key: NVIDIA_EMBED_MODEL
+        value: nvidia/llama-nemotron-embed-vl-1b-v2
+      - key: SUPABASE_URL
+        value: https://example.supabase.co
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        value: sb_secret_example
 
 databases:
   - name: toolstack-ai-db

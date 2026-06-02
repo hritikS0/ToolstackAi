@@ -68,7 +68,7 @@ export async function processPdfUpload(
     const batchResults = await Promise.allSettled(
       batch.map(async (text, j) => {
         const chunkIndex = i + j;
-        const vector = await generateEmbedding(text, "passage");
+        const vector = await generateEmbedding(text, "passage", userId);
         return { chunkId: `${document.id}-chunk-${chunkIndex}`, vector, chunkIndex, text };
       }),
     );
@@ -131,7 +131,7 @@ export async function answerPdfQuestion(
     throw Object.assign(new Error("Document not found. Please upload the PDF again."), { statusCode: 404 });
   }
 
-  const questionVector = await generateEmbedding(question, "query");
+  const questionVector = await generateEmbedding(question, "query", userId);
   const results = await store.searchEmbeddings(questionVector, 5);
   const context = results
     .map((r) => (r.metadata as { text?: string }).text || "")

@@ -3,6 +3,11 @@ import { nvidia } from "../../ai/providers/nvidia.js";
 import { codeDebuggerPrompt } from "../../ai/prompts/prompts.js";
 import { handleAIError } from "../../shared/utils/ai-error-handler.js";
 import { logger } from "../../shared/utils/logger.js";
+import { getUserKey } from "../api-keys/api-keys.service.js";
+
+async function getUserApiKey(userId: string): Promise<string | null> {
+  return getUserKey(userId, "nvidia");
+}
 
 interface DebugResult {
   summary: string;
@@ -27,10 +32,11 @@ export async function debugCodeService(
   const prompt = codeDebuggerPrompt(code, language, "");
 
   try {
+    const userKey = await getUserApiKey(userId);
     const completion = await nvidia.chatCompletion([
       { role: "system", content: "You are a senior code reviewer. Always return valid JSON only, no markdown." },
       { role: "user", content: prompt },
-    ]);
+    ], userKey ? { apiKey: userKey } : {});
 
     const raw = completion.choices[0]?.message?.content || "{}";
     let parsed: Partial<DebugResult>;
