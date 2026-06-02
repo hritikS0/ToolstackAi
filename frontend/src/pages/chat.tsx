@@ -231,7 +231,7 @@ export function ChatPage() {
     e.target.value = ''
   }
 
-  const prevIdRef = useRef(id)
+
 
   useEffect(() => {
     if (prevIdRef.current !== id) {
@@ -247,16 +247,23 @@ export function ChatPage() {
 
   useEffect(() => {
     if (isStreaming) return
-    if (streamingContent) {
-      const confirmed = (messages as Message[]).some(
-        m => m.role === 'assistant' && m.content === streamingContent
-      )
-      if (confirmed) {
-        console.log('[chat] server confirmed assistant message, clearing local state')
-        setStreamingContent('')
-      }
+
+    const streamConfirmed = streamingContent && (messages as Message[]).some(
+      m => m.role === 'assistant' && m.content === streamingContent
+    )
+    const optimisticConfirmed = optimisticUserMsg && (messages as Message[]).some(
+      m => m.role === 'user' && m.content === optimisticUserMsg
+    )
+
+    if (streamConfirmed && optimisticConfirmed) {
+      console.log('[chat] server confirmed both messages, clearing local state')
+      setStreamingContent('')
+      setOptimisticUserMsg(null)
+    } else if (streamConfirmed) {
+      console.log('[chat] server confirmed assistant message, clearing streaming')
+      setStreamingContent('')
     }
-  }, [messages, isStreaming, streamingContent])
+  }, [messages, isStreaming, streamingContent, optimisticUserMsg])
 
   useEffect(() => {
     if (!isThinking) {
