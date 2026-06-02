@@ -36,10 +36,11 @@ export function AppLayout() {
       )}
 
       <div className="flex-1 flex flex-col min-w-0">
-        <div className="shrink-0 h-11 flex items-center justify-end px-4 border-b border-base-800">
-          <button type="button" onClick={() => setMobileOpen(true)} className="md:hidden absolute left-4 size-8 flex items-center justify-center text-base-400 hover:text-base-200 z-10">
+        <div className="shrink-0 h-11 flex items-center justify-between px-4 border-b border-base-800">
+          <button type="button" onClick={() => setMobileOpen(true)} className="md:hidden size-8 flex items-center justify-center text-base-400 hover:text-base-200">
             <Menu className="size-4" />
           </button>
+          <div className="flex-1" />
           <UserMenu />
         </div>
         <main className="flex-1 overflow-hidden">
