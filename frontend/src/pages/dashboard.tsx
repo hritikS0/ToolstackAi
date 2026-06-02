@@ -6,7 +6,7 @@ import { formatRelativeTime, truncate } from '@/lib/utils'
 import {
   MessageSquare, FileText, Image, Bug, Terminal, Brain, Sparkles, Target,
   Trophy, Wrench, Heart, BookOpen,
-  FolderOpen,
+  FolderOpen, ChevronRight
 } from 'lucide-react'
 import type { DashboardData } from '@/types/api'
 

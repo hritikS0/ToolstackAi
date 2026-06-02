@@ -163,18 +163,24 @@ export async function autoExtractMemories(userMessage: string, userId: string): 
   try {
     const { nvidia } = await import("../../ai/providers/nvidia.js");
     const { memoryExtractionPrompt } = await import("../../ai/prompts/prompts.js");
+    const { getUserKey } = await import("../api-keys/api-keys.service.js");
 
+    const userKey = await getUserKey(userId, "nvidia");
     const prompt = memoryExtractionPrompt(userMessage);
     const completion = await nvidia.chatCompletion(
       [
         { role: "system", content: "You are a memory extraction system. Extract personal facts from user messages. Return only valid JSON." },
         { role: "user", content: prompt },
       ],
-      { temperature: 0.1, maxTokens: 500 },
+      { temperature: 0.1, maxTokens: 500, apiKey: userKey || undefined },
     );
 
     const raw = completion.choices[0]?.message?.content || "[]";
-    const cleaned = raw.replace(/```(?:json)?\s*/gi, "").replace(/\s*```/g, "").trim();
+    let cleaned = raw.replace(/```(?:json)?\s*/gi, "").replace(/\s*```/g, "").trim();
+    const arrayMatch = cleaned.match(/\[[\s\S]*\]/);
+    if (arrayMatch) {
+      cleaned = arrayMatch[0];
+    }
     const extracted: { category: string; title: string; content: string; importance: number; confidence: number }[] = JSON.parse(cleaned);
     if (!Array.isArray(extracted) || extracted.length === 0) return 0;
 

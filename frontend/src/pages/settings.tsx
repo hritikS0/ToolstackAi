@@ -43,7 +43,7 @@ export function SettingsPage() {
   const [addProvider, setAddProvider] = useState('')
   const [newKey, setNewKey] = useState('')
   const [testing, setTesting] = useState<string | null>(null)
-  const [testMsg, setTestMsg] = useState('')
+  const [testResult, setTestResult] = useState<{ providerId: string; success: boolean; message: string } | null>(null)
 
   const { data: keys = [], isLoading: keysLoading } = useQuery({
     queryKey: ['api-keys'],
@@ -62,13 +62,18 @@ export function SettingsPage() {
 
   const handleTest = async (provider: string) => {
     setTesting(provider)
-    setTestMsg('')
+    setTestResult(null)
     try {
       const res = await keysService.testKey(provider)
-      setTestMsg(res.data?.ok ? 'Connected' : res.data?.message || 'Failed')
-      if (res.data?.ok) setTimeout(() => setTestMsg(''), 3000)
+      if (res.data?.ok) {
+        setTestResult({ providerId: provider, success: true, message: 'Connection successful!' })
+      } else {
+        setTestResult({ providerId: provider, success: false, message: res.data?.message || 'Connection failed' })
+      }
+      setTimeout(() => setTestResult(null), 4000)
     } catch {
-      setTestMsg('Test failed')
+      setTestResult({ providerId: provider, success: false, message: 'Test failed: Network error' })
+      setTimeout(() => setTestResult(null), 4000)
     } finally {
       setTesting(null)
     }
@@ -222,50 +227,74 @@ export function SettingsPage() {
                   {providers.map(p => {
                     const k = keyMap.get(p.id)
                     return (
-                      <div key={p.id} className="flex items-center gap-3 rounded-[4px] border border-base-800 bg-base-950 p-3">
-                        <div className={`size-2 rounded-full shrink-0 ${k?.isActive ? 'bg-emerald-500' : 'bg-base-600'}`} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3">
-                            <span className="text-[12px] font-medium text-base-200 font-mono">{p.name}</span>
-                            <span className="text-[10px] text-base-600 font-mono">{p.desc}</span>
-                          </div>
-                          {k ? (
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[10px] font-mono text-base-500">{k.maskedKey}</span>
-                              <span className="text-[9px] text-base-600 font-mono">Added {new Date(k.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                      <div key={p.id} className="rounded-[4px] border border-base-800 bg-base-950 p-4 space-y-3">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-start gap-2.5 min-w-0">
+                            <div className={`size-2 rounded-full mt-1.5 shrink-0 ${k?.isActive ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-base-600'}`} />
+                            <div className="min-w-0">
+                              <div className="flex items-baseline gap-2 flex-wrap">
+                                <span className="text-[12px] font-semibold text-base-200 font-mono">{p.name}</span>
+                                <span className="text-[10px] text-base-500 font-mono">{p.desc}</span>
+                              </div>
+                              {k ? (
+                                <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                                  <span className="text-[10px] font-mono text-base-400 bg-base-900 px-1.5 py-0.5 rounded border border-base-800">{k.maskedKey}</span>
+                                  <span className="text-[9px] text-base-600 font-mono">Added {new Date(k.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                                </div>
+                              ) : (
+                                <p className="text-[10px] text-base-600 font-mono mt-1">No key configured — using platform default</p>
+                              )}
                             </div>
-                          ) : (
-                            <p className="text-[10px] text-base-600 font-mono mt-0.5">No key configured — using platform default</p>
-                          )}
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {k && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-[10px] h-7 px-2 hover:bg-base-800 text-base-400 hover:text-base-200"
+                                  onClick={() => handleTest(p.id)}
+                                  disabled={testing !== null}
+                                >
+                                  {testing === p.id ? (
+                                    <Loader2 className="size-3 animate-spin" />
+                                  ) : (
+                                    <Wifi className="size-3" />
+                                  )}
+                                  <span className="ml-1">Test</span>
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="text-[10px] h-7 w-7 p-0 text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center justify-center" 
+                                  onClick={() => deleteMutation.mutate(p.id)}
+                                >
+                                  <Trash2 className="size-3" />
+                                </Button>
+                              </>
+                            )}
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="text-[10px] h-7 px-2"
+                              onClick={() => { setAddProvider(p.id); setNewKey('') }}
+                            >
+                              {k ? <Pencil className="size-3" /> : <Plus className="size-3" />}
+                              <span className="ml-1">{k ? 'Update' : 'Add'}</span>
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          {k && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-[10px]"
-                                onClick={() => handleTest(p.id)}
-                                disabled={testing === p.id}
-                              >
-                                {testing === p.id ? <Loader2 className="size-3 animate-spin" /> : <Wifi className="size-3" />}
-                                <span className="ml-1">{testing === p.id && testMsg ? testMsg : 'Test'}</span>
-                              </Button>
-                              <Button variant="ghost" size="sm" className="text-[10px] text-red-400" onClick={() => deleteMutation.mutate(p.id)}>
-                                <Trash2 className="size-3" />
-                              </Button>
-                            </>
-                          )}
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className="text-[10px]"
-                            onClick={() => { setAddProvider(p.id); setNewKey('') }}
-                          >
-                            {k ? <Pencil className="size-3" /> : <Plus className="size-3" />}
-                            <span className="ml-1">{k ? 'Update' : 'Add'}</span>
-                          </Button>
-                        </div>
+
+                        {testResult && testResult.providerId === p.id && (
+                          <div className={`text-[10px] font-mono px-2.5 py-1 rounded-[3px] border flex items-center gap-1.5 ${
+                            testResult.success 
+                              ? 'bg-emerald-500/5 border-emerald-500/10 text-emerald-400' 
+                              : 'bg-red-500/5 border-red-500/10 text-red-400'
+                          }`}>
+                            <div className={`size-1.5 rounded-full ${testResult.success ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
+                            <span>{testResult.message}</span>
+                          </div>
+                        )}
                       </div>
                     )
                   })}

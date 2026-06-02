@@ -103,6 +103,8 @@ export async function* streamAiResponse(
 ): AsyncGenerator<string, void, unknown> {
   const prisma = getPrismaClient();
 
+  const extractPromise = autoExtractMemories(message, userId).catch(() => 0);
+
   await createMessageService(message, conversationId, "user");
 
   const history = await prisma.message.findMany({
@@ -163,9 +165,11 @@ export async function* streamAiResponse(
     cost: 0,
   }).catch(() => {});
 
-  autoExtractMemories(message, userId).then((saved) => {
-    if (saved > 0) memoryCache.delete(userId);
-  }).catch(() => {});
+  const saved = await extractPromise;
+  if (saved > 0) {
+    memoryCache.delete(userId);
+    yield `__brain__:${saved}`;
+  }
 
   await autoTitleConversation(conversationId, message);
 
