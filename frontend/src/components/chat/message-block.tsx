@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
 import remarkGfm from 'remark-gfm'
 import { cn } from '@/lib/utils'
-import { Copy, Check, RefreshCw, Pencil } from 'lucide-react'
+import { Copy, Check, RefreshCw, Pencil, Sparkles } from 'lucide-react'
 
 interface MessageBlockProps {
   role: 'user' | 'assistant'
@@ -20,23 +20,8 @@ interface MessageBlockProps {
   imageUrl?: string
 }
 
-function ThinkingDots() {
-  return (
-    <span className="thinking-dots inline-flex items-center gap-[3px] ml-1">
-      <span className="thinking-dot w-[3px] h-[3px] rounded-full bg-accent/60 inline-block" />
-      <span className="thinking-dot w-[3px] h-[3px] rounded-full bg-accent/60 inline-block" />
-      <span className="thinking-dot w-[3px] h-[3px] rounded-full bg-accent/60 inline-block" />
-    </span>
-  )
-}
-
-function ThinkingContent({ message }: { message: string }) {
-  return (
-    <div className="thinking-fade-in">
-      <span className="text-[12px] text-base-400 font-mono italic">{message}</span>
-      <ThinkingDots />
-    </div>
-  )
+function TerminalCursor() {
+  return <span className="terminal-cursor ml-0.5 text-accent/70">▋</span>
 }
 
 function AssistantMessage({
@@ -55,12 +40,13 @@ function AssistantMessage({
   }
 
   return (
-    <div className="group rounded-[4px] border border-base-800 bg-surface overflow-hidden assistant-message-container">
+    <div className="group rounded-[4px] border border-base-800 bg-surface overflow-hidden">
       <div className="flex items-center justify-between h-8 px-3 border-b border-base-800 bg-base-950/50">
         <div className="flex items-center gap-2">
+          <Sparkles className="size-3 text-accent/60" />
           <span className="text-[11px] font-medium text-accent">{modelName || 'ToolStackAI'}</span>
           {showThinking && (
-            <span className="text-[10px] text-base-500 font-mono animate-pulse">thinking</span>
+            <span className="text-[10px] text-base-500 font-mono">thinking</span>
           )}
           {tokenSpeed && (
             <span className="text-[10px] text-base-600 font-mono">{tokenSpeed}</span>
@@ -73,29 +59,36 @@ function AssistantMessage({
         </div>
       </div>
 
-      <div className="px-4 py-3 text-[12px] leading-relaxed text-base-200 min-h-[28px]">
-        {showThinking ? (
-          <ThinkingContent message={thinkingMessage || 'Thinking...'} />
-        ) : hasContent ? (
-          <div className={cn((isStreaming || isThinking) && 'thinking-fade-in', isStreaming && 'streaming-in')}>
-            <div className="prose prose-invert max-w-none text-[12px] leading-relaxed">
-              <ReactMarkdown
-                rehypePlugins={[rehypeHighlight]}
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  a: ({ href, children }) => (
-                    <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
-                  ),
-                }}
-              >
-                {safeContent}
-              </ReactMarkdown>
-            </div>
-            {isStreaming && <span className="streaming-cursor-static">▌</span>}
-          </div>
-        ) : (
-          <span className="text-[12px] text-base-600 font-mono italic">Ready</span>
-        )}
+      <div className="px-4 py-3 min-h-[28px]">
+        <span className={cn(
+          'text-[12px] leading-relaxed',
+          showThinking ? 'text-base-400 font-mono' : 'text-base-200',
+          !showThinking && hasContent && (isStreaming || isThinking) && 'thinking-fade-in',
+          isStreaming && hasContent && 'streaming-in'
+        )}>
+          {showThinking ? (
+            <>{thinkingMessage || 'Thinking...'}<TerminalCursor /></>
+          ) : hasContent ? (
+            <>
+              <div className="prose prose-invert max-w-none text-[12px] leading-relaxed">
+                <ReactMarkdown
+                  rehypePlugins={[rehypeHighlight]}
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    a: ({ href, children }) => (
+                      <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
+                    ),
+                  }}
+                >
+                  {safeContent}
+                </ReactMarkdown>
+              </div>
+              {isStreaming && <TerminalCursor />}
+            </>
+          ) : (
+            <span className="text-base-600 font-mono italic">Ready</span>
+          )}
+        </span>
       </div>
 
       <div className="flex items-center gap-1 px-3 py-1.5 border-t border-base-800 opacity-0 group-hover:opacity-100 transition-opacity">

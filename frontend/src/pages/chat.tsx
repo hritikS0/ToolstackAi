@@ -11,10 +11,11 @@ import type { Message, Conversation } from '@/types/api'
 
 const THINKING_MESSAGES = [
   'Thinking...',
-  'Looking into that...',
+  'Processing results...',
   'Analyzing context...',
   'Reviewing information...',
-  'Working on it...',
+  'Working through it...',
+  'Looking into that...',
 ]
 
 export function ChatPage() {
