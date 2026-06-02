@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from '@/store/auth'
@@ -12,6 +13,12 @@ const queryClient = new QueryClient({
 })
 
 function App() {
+  useEffect(() => {
+    // Instantly wake up Render free-tier backend in the background when app mounts
+    const baseUrl = config.api.baseUrl
+    fetch(`${baseUrl}/health`).catch(() => {})
+  }, [])
+
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
