@@ -54,7 +54,7 @@ export function ConversationsPage() {
     else { setSortField(field); setSortOrder('desc') }
   }
 
-  const handleTitleClick = (id: string, type: string, title: string) => {
+  const handleTitleClick = (id: string, type: string | undefined, title: string) => {
     if (pendingNav.current?.id === id) {
       clearTimeout(pendingNav.current.timer)
       pendingNav.current = null
