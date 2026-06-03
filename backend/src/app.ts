@@ -41,6 +41,11 @@ import apiKeysRoutes from "./features/api-keys/api-keys.routes.js";
 import dashboardRoutes from "./features/dashboard/dashboard.routes.js";
 import mediaRoutes from "./features/media/media.routes.js";
 import filesRoutes from "./features/files/files.routes.js";
+import habitsRoutes from "./features/habits/habits.routes.js";
+import notesRoutes from "./features/notes/notes.routes.js";
+import tasksRoutes from "./features/tasks/tasks.routes.js";
+import goalsRoutes from "./features/goals/goals.routes.js";
+import briefingRoutes from "./features/briefing/briefing.routes.js";
 
 app.use("/api/auth", authRoutes);
 app.use("/api/chat", conversationRoutes);
@@ -53,6 +58,11 @@ app.use("/api/keys", apiKeysRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/media", mediaRoutes);
 app.use("/api/files", filesRoutes);
+app.use("/api/habits", habitsRoutes);
+app.use("/api/notes", notesRoutes);
+app.use("/api/tasks", tasksRoutes);
+app.use("/api/goals", goalsRoutes);
+app.use("/api/briefing", briefingRoutes);
 
 app.use(errorHandler);
 

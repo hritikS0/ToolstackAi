@@ -35,6 +35,13 @@ export interface Message {
   conversationId: string
   role: 'user' | 'assistant'
   content: string
+  chatMedia?: {
+    id: string
+    fileName: string
+    mimeType: string
+    filePath: string
+    url?: string | null
+  } | null
   createdAt: string
 }
 
@@ -166,4 +173,98 @@ export interface MediaItem {
   createdAt: string
   url?: string | null
   source: 'chat' | 'upload'
+}
+
+export interface Habit {
+  id: string
+  userId: string
+  projectId?: string | null
+  title: string
+  description: string
+  frequency: 'daily' | 'weekly' | 'monthly'
+  targetCount?: string | null
+  active: boolean
+  createdAt: string
+  updatedAt: string
+  completions?: HabitCompletion[]
+  todayCompleted?: boolean
+  currentStreak?: number
+  longestStreak?: number
+}
+
+export interface HabitCompletion {
+  id: string
+  habitId: string
+  completedAt: string
+  periodStart: string
+}
+
+export interface HabitStats {
+  habit: Habit
+  currentStreak: number
+  longestStreak: number
+  completionRate: number
+  heatmap: { date: string; completed: boolean }[]
+}
+
+export interface Goal {
+  id: string
+  userId: string
+  projectId?: string | null
+  title: string
+  description: string
+  targetDate?: string | null
+  status: 'active' | 'completed' | 'archived'
+  progress: number
+  createdAt: string
+  updatedAt: string
+  milestones?: Milestone[]
+}
+
+export interface Milestone {
+  id: string
+  goalId: string
+  title: string
+  description: string
+  status: 'pending' | 'completed'
+  order: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Note {
+  id: string
+  userId: string
+  projectId?: string | null
+  title: string
+  content: string
+  tags: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface BriefingData {
+  greeting: string
+  firstName: string
+  date: string
+  stats: { tasks: number; habits: number; projects: number; goals: number }
+  tasks: { open: number; overdue: number; topTasks: { id: string; title: string; priority: string; status: string; dueDate?: string | null }[] }
+  habits: { completed: number; total: number; habits: { id: string; title: string; frequency: string; todayCompleted: boolean; currentStreak?: number }[] }
+  projects: { active: number; projects: { id: string; name: string; taskCount?: number; color?: string }[] }
+  recentActivity: { action: string; title: string; timestamp: string }[]
+  aiSuggestion: string | null
+}
+
+export interface Task {
+  id: string
+  userId: string
+  projectId?: string | null
+  title: string
+  description: string
+  priority: 'low' | 'medium' | 'high' | 'critical'
+  status: 'todo' | 'in-progress' | 'done' | 'archived'
+  dueDate?: string | null
+  tags: string[]
+  createdAt: string
+  updatedAt: string
 }

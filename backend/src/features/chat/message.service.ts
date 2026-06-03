@@ -1,4 +1,5 @@
 import { getPrismaClient } from "../../shared/db/prismaClient.js";
+import { getSignedUrl } from "../../services/storage.service.js";
 
 export async function createMessageService(
   message: string,
@@ -22,12 +23,28 @@ export async function createMessageService(
 }
 export async function getMessageService(conversationId: string) {
     const prisma = getPrismaClient();
-    return await prisma.message.findMany({
+    const messages = await prisma.message.findMany({
       where: {
         conversationId
       },
       orderBy: {
         createdAt: "asc"
-      }
+      },
+      include: {
+        chatMedia: true,
+      },
     });
+
+    return await Promise.all(
+      messages.map(async (msg) => {
+        if (msg.chatMedia?.filePath) {
+          const url = await getSignedUrl(msg.chatMedia.filePath, "images").catch(() => null);
+          return {
+            ...msg,
+            chatMedia: { id: msg.chatMedia.id, fileName: msg.chatMedia.fileName, mimeType: msg.chatMedia.mimeType, filePath: msg.chatMedia.filePath, url },
+          };
+        }
+        return msg;
+      }),
+    );
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { chatService } from '@/services/chat.service'
@@ -18,6 +18,7 @@ export function ConversationsPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const pendingNav = useRef<{ id: string; timer: ReturnType<typeof setTimeout> } | null>(null)
 
   const { data: conversations = [], isLoading } = useQuery({
     queryKey: ['conversations'],
@@ -34,7 +35,10 @@ export function ConversationsPage() {
 
   const renameMutation = useMutation({
     mutationFn: ({ id, title }: { id: string; title: string }) => chatService.updateConversation(id, { title }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['conversations'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      setEditingId(null)
+    },
   })
 
   const filtered = conversations
@@ -48,6 +52,24 @@ export function ConversationsPage() {
   const toggleSort = (field: 'createdAt' | 'title') => {
     if (sortField === field) setSortOrder(o => o === 'desc' ? 'asc' : 'desc')
     else { setSortField(field); setSortOrder('desc') }
+  }
+
+  const handleTitleClick = (id: string, type: string, title: string) => {
+    if (pendingNav.current?.id === id) {
+      clearTimeout(pendingNav.current.timer)
+      pendingNav.current = null
+      setEditingId(id)
+      setEditTitle(title || '')
+    } else {
+      if (pendingNav.current) clearTimeout(pendingNav.current.timer)
+      pendingNav.current = {
+        id,
+        timer: setTimeout(() => {
+          pendingNav.current = null
+          navigate(type === 'pdf' ? `/pdf/${id}` : `/chat/${id}`)
+        }, 250),
+      }
+    }
   }
 
   return (
@@ -95,23 +117,26 @@ export function ConversationsPage() {
                       {editingId === c.id ? (
                         <div className="flex items-center gap-1">
                           <Input value={editTitle} onChange={e => setEditTitle(e.target.value)}
-                            className="h-6 text-[11px] font-mono" autoFocus
+                            className="h-6 text-[11px] font-mono min-w-[200px]" autoFocus
+                            disabled={renameMutation.isPending}
                             onKeyDown={e => {
-                              if (e.key === 'Enter') { renameMutation.mutate({ id: c.id, title: editTitle }); setEditingId(null) }
+                              if (e.key === 'Enter') renameMutation.mutate({ id: c.id, title: editTitle })
                               if (e.key === 'Escape') setEditingId(null)
                             }} />
-                          <Button variant="ghost" size="icon" className="size-6" onClick={() => { renameMutation.mutate({ id: c.id, title: editTitle }); setEditingId(null) }}><Check className="size-3 text-accent" /></Button>
+                          <Button variant="ghost" size="icon" className="size-6" disabled={renameMutation.isPending} onClick={() => renameMutation.mutate({ id: c.id, title: editTitle })}>
+                            {renameMutation.isPending ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3 text-accent" />}
+                          </Button>
                           <Button variant="ghost" size="icon" className="size-6" onClick={() => setEditingId(null)}><X className="size-3" /></Button>
                         </div>
                       ) : (
-                        <button type="button" onClick={() => navigate(c.type === 'pdf' ? `/pdf/${c.id}` : `/chat/${c.id}`)} className="text-[11px] text-base-200 hover:text-base-100 cursor-pointer text-left">{truncate(c.title || 'Untitled', 50)}</button>
+                        <button type="button" onClick={() => handleTitleClick(c.id, c.type, c.title || '')} className="text-[11px] text-base-200 hover:text-base-100 cursor-pointer text-left">{truncate(c.title || 'Untitled', 50)}</button>
                       )}
                     </td>
                     <td className="px-3 py-1.5 text-[11px] text-base-500">{formatRelativeTime(c.createdAt)}</td>
                     <td className="px-3 py-1.5 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="size-6" onClick={() => { setEditingId(c.id); setEditTitle(c.title || '') }}>
-                          <Pencil className="size-3.5" />
+                        <Button variant="ghost" size="sm" className="gap-1 text-[11px]" onClick={() => { setEditingId(c.id); setEditTitle(c.title || '') }}>
+                          <Pencil className="size-3.5" /> Edit
                         </Button>
                         <Button variant="ghost" size="icon" className="size-6 text-red-400" onClick={() => setDeleteTarget(c.id)}>
                           {deleteMutation.isPending && deleteMutation.variables === c.id ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3.5" />}

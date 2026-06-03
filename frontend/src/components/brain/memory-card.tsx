@@ -23,10 +23,13 @@ export function MemoryCard({ memory, active, onSelect, onTogglePin }: MemoryCard
   const catColor = categoryColors[memory.category] || 'border-base-700 bg-base-800/30'
 
   return (
-    <button type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onSelect}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect() }}
       className={cn(
-        'w-full text-left rounded-[4px] border p-2.5 transition-all hover:border-accent/40',
+        'w-full text-left rounded-[4px] border p-2.5 transition-all hover:border-accent/40 cursor-pointer group',
         active ? 'border-accent bg-accent-muted' : catColor,
       )}
     >
@@ -64,6 +67,6 @@ export function MemoryCard({ memory, active, onSelect, onTogglePin }: MemoryCard
           {memory.pinned ? <PinOff className="size-3" /> : <Pin className="size-3" />}
         </button>
       </div>
-    </button>
+    </div>
   )
 }

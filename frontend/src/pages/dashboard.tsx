@@ -2,19 +2,21 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/store/auth'
 import { dashboardService } from '@/services/dashboard.service'
-import { formatRelativeTime, truncate } from '@/lib/utils'
+import { briefingService } from '@/services/briefing.service'
+import { habitsService } from '@/services/habits.service'
+import { formatRelativeTime, truncate, cn } from '@/lib/utils'
 import {
   MessageSquare, FileText, Image, Bug, Terminal, Brain, Sparkles, Target,
   Trophy, Wrench, Heart, BookOpen,
-  FolderOpen, ChevronRight
+  FolderOpen, ChevronRight, CheckSquare, Flame, Clock, AlertTriangle, CheckCircle2, Circle
 } from 'lucide-react'
-import type { DashboardData } from '@/types/api'
+import type { DashboardData, BriefingData, Habit } from '@/types/api'
 
 const quickActions = [
-  { icon: MessageSquare, label: 'New Chat', path: '/chat', key: '⌘1' },
-  { icon: FileText, label: 'Upload PDF', path: '/pdf', key: '⌘2' },
-  { icon: Image, label: 'Image Analysis', path: '/image', key: '⌘3' },
-  { icon: Bug, label: 'Code Debugger', path: '/debug', key: '⌘4' },
+  { icon: MessageSquare, label: 'New Chat', path: '/chat', key: 'k1' },
+  { icon: FileText, label: 'Upload PDF', path: '/pdf', key: 'k2' },
+  { icon: Image, label: 'Image Analysis', path: '/image', key: 'k3' },
+  { icon: Bug, label: 'Code Debugger', path: '/debug', key: 'k4' },
 ]
 
 function StatCard({ label, value, icon: Icon, color }: { label: string; value: number; icon: typeof MessageSquare; color: string }) {
@@ -29,18 +31,115 @@ function StatCard({ label, value, icon: Icon, color }: { label: string; value: n
   )
 }
 
+const priorityBadge = (priority: string) => {
+  const map: Record<string, { color: string; bg: string }> = {
+    critical: { color: 'text-red-400', bg: 'bg-red-400/10 border-red-400/30' },
+    high: { color: 'text-orange-400', bg: 'bg-orange-400/10 border-orange-400/30' },
+    medium: { color: 'text-amber-400', bg: 'bg-amber-400/10 border-amber-400/30' },
+    low: { color: 'text-base-500', bg: 'bg-base-800 border-base-700' },
+  }
+  const style = map[priority] || map.low
+  return (
+    <span className={`text-[11px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded-[2px] border ${style.bg} ${style.color}`}>
+      {priority}
+    </span>
+  )
+}
+
+function BriefingSection({ icon: Icon, title, children, action }: { icon: typeof MessageSquare; title: string; children: React.ReactNode; action?: React.ReactNode }) {
+  return (
+    <div className="rounded-[4px] border border-base-800 bg-surface overflow-hidden">
+      <div className="flex items-center h-[34px] px-3 border-b border-base-800 bg-surface-alt gap-2">
+        <Icon className="size-3.5 text-base-500" />
+        <span className="text-[13px] font-medium text-base-400 uppercase tracking-wider font-mono">{title}</span>
+        {action && <div className="ml-auto flex items-center">{action}</div>}
+      </div>
+      <div className="p-3">{children}</div>
+    </div>
+  )
+}
+
+function EmptyDashboard({ firstName }: { firstName: string }) {
+  const navigate = useNavigate()
+  return (
+    <div className="h-full overflow-y-auto">
+      <div className="h-full flex flex-col">
+        <div className="flex-1 flex items-center justify-center px-4">
+          <div className="text-center max-w-lg">
+            <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-[4px] border border-base-800 text-[13px] text-base-500 mb-6 font-mono">
+              <Terminal className="size-3" />
+              developer operating system
+            </div>
+
+            <h1 className="text-4xl font-bold tracking-tight text-base-100 mb-2 font-mono">
+              ToolStack<span className="text-accent">AI</span>
+            </h1>
+
+            <p className="text-[13px] text-base-400 mb-8 font-mono leading-relaxed max-w-md mx-auto">
+              ~/welcome, {firstName}
+            </p>
+
+            <div className="flex items-center justify-center gap-1.5 flex-wrap">
+              {quickActions.map((a) => (
+                <button type="button"
+                  key={a.label}
+                  onClick={() => navigate(a.path)}
+                  className="flex items-center gap-1.5 h-7 px-2.5 rounded-[4px] text-[14px] font-medium text-base-400 bg-surface border border-base-800 hover:text-base-200 hover:bg-base-800 hover:border-base-700 transition-all"
+                >
+                  <a.icon className="size-3.5" />
+                  {a.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function DashboardPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
-
-  const { data, isLoading: dashLoading } = useQuery({
-    queryKey: ['dashboard'],
-    queryFn: async () => (await dashboardService.get()).data,
-  })
-
   const firstName = user?.fullName?.split(' ')[0] || 'developer'
 
-  if (dashLoading || !data) {
+  const { data: habits = [] } = useQuery({
+    queryKey: ['habits'],
+    queryFn: async () => {
+      try {
+        return (await habitsService.list()).data || []
+      } catch {
+        return []
+      }
+    }
+  })
+
+  const briefing = useQuery({
+    queryKey: ['briefing'],
+    queryFn: async () => {
+      try {
+        return (await briefingService.get()).data
+      } catch {
+        return null
+      }
+    },
+  })
+
+  const legacy = useQuery({
+    queryKey: ['dashboard'],
+    queryFn: async () => {
+      try {
+        return (await dashboardService.get()).data
+      } catch {
+        return null
+      }
+    },
+    enabled: briefing.data === null || briefing.isError,
+  })
+
+  const isLoading = briefing.isLoading || (legacy.isEnabled && legacy.isLoading)
+
+  if (isLoading) {
     return (
       <div className="h-full overflow-y-auto">
         <div className="h-full flex flex-col">
@@ -52,40 +151,217 @@ export function DashboardPage() {
     )
   }
 
-  const d = data
-  const isEmpty = d.stats.conversations === 0 && d.stats.memories === 0 && d.stats.images === 0 && d.stats.debugSessions === 0
+  const data = briefing.data
+  const legacyData = legacy.data
 
-  if (isEmpty) {
+  if (data) {
+    const b = data as BriefingData
     return (
       <div className="h-full overflow-y-auto">
-        <div className="h-full flex flex-col">
-          <div className="flex-1 flex items-center justify-center px-4">
-            <div className="text-center max-w-lg">
-              <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-[4px] border border-base-800 text-[13px] text-base-500 mb-6 font-mono">
-                <Terminal className="size-3" />
-                developer operating system
-              </div>
-
-              <h1 className="text-4xl font-bold tracking-tight text-base-100 mb-2 font-mono">
-                ToolStack<span className="text-accent">AI</span>
+        <div className="p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold text-base-100 font-mono">
+                {b.greeting}, {b.firstName}.
               </h1>
-
-              <p className="text-[13px] text-base-400 mb-8 font-mono leading-relaxed max-w-md mx-auto">
-                ~/welcome, {firstName}
+              <p className="text-[14px] text-base-500 mt-0.5 font-mono">
+                {new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(new Date(b.date))}
               </p>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {quickActions.map((a) => (
+                <button type="button"
+                  key={a.label}
+                  onClick={() => navigate(a.path)}
+                  className="flex items-center gap-1.5 h-7 px-2.5 rounded-[4px] text-[14px] font-medium text-base-400 bg-surface border border-base-800 hover:text-base-200 hover:bg-base-800 transition-all"
+                >
+                  <a.icon className="size-3.5" />
+                  {a.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-              <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                {quickActions.map((a) => (
-                  <button type="button"
-                    key={a.label}
-                    onClick={() => navigate(a.path)}
-                    className="flex items-center gap-1.5 h-7 px-2.5 rounded-[4px] text-[14px] font-medium text-base-400 bg-surface border border-base-800 hover:text-base-200 hover:bg-base-800 hover:border-base-700 transition-all"
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <StatCard label="Tasks" value={b.stats.tasks} icon={CheckSquare} color="text-accent" />
+            <StatCard label="Habits" value={b.stats.habits} icon={Flame} color="text-orange-400" />
+            <StatCard label="Projects" value={b.stats.projects} icon={FolderOpen} color="text-blue-400" />
+            <StatCard label="Goals" value={b.stats.goals} icon={Target} color="text-emerald-400" />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+            <div className="col-span-2 space-y-3">
+              <BriefingSection icon={CheckSquare} title="Today's Focus">
+                {b.tasks.overdue > 0 && (
+                  <div className="mb-3 space-y-1.5">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <AlertTriangle className="size-3.5 text-red-400" />
+                      <span className="text-[13px] text-red-400 font-mono uppercase tracking-wider">
+                        {b.tasks.overdue} overdue task{b.tasks.overdue !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    {b.tasks.topTasks
+                      .filter((t) => t.dueDate && new Date(t.dueDate) < new Date())
+                      .slice(0, 3)
+                      .map((t) => (
+                        <button type="button" key={t.id}
+                          onClick={() => navigate('/tasks')}
+                          className="flex items-center gap-2 w-full px-2.5 py-1.5 rounded-[4px] bg-red-400/5 border border-red-400/20 hover:bg-red-400/10 transition-colors text-left"
+                        >
+                          <Clock className="size-3.5 text-red-400 shrink-0" />
+                          <span className="flex-1 text-[14px] text-base-200 font-mono truncate">{t.title}</span>
+                          {priorityBadge(t.priority)}
+                        </button>
+                      ))}
+                  </div>
+                )}
+                {b.tasks.topTasks.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Target className="size-3.5 text-accent" />
+                      <span className="text-[13px] text-accent font-mono uppercase tracking-wider">
+                        Top priorities
+                      </span>
+                    </div>
+                    {b.tasks.topTasks.map((t) => (
+                      <button type="button" key={t.id}
+                        onClick={() => navigate('/tasks')}
+                        className="flex items-center gap-2 w-full px-2.5 py-1.5 rounded-[4px] hover:bg-base-800/40 transition-colors text-left group"
+                      >
+                        <div className="size-1.5 rounded-full bg-base-600 group-hover:bg-accent transition-colors shrink-0" />
+                        <span className="flex-1 text-[14px] text-base-300 font-mono truncate">{t.title}</span>
+                        {priorityBadge(t.priority)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {b.tasks.topTasks.length === 0 && (
+                  <p className="text-[13px] text-base-600 font-mono py-2">No open tasks. Enjoy the clear deck.</p>
+                )}
+              </BriefingSection>
+
+              <BriefingSection
+                icon={Flame}
+                title="Habits"
+                action={
+                  <button
+                    type="button"
+                    onClick={() => navigate('/habits')}
+                    className="text-[12px] text-base-500 hover:text-base-300 font-mono transition-colors flex items-center gap-0.5 ml-auto cursor-pointer"
                   >
-                    <a.icon className="size-3.5" />
-                    {a.label}
+                    view details <ChevronRight className="size-3" />
                   </button>
-                ))}
-              </div>
+                }
+              >
+                {b.habits.habits.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {b.habits.habits.map((h) => {
+                      const fullHabit = (habits as Habit[]).find(fh => fh.id === h.id)
+                      const comps = fullHabit?.completions || []
+                      const completedDates = new Set(comps.map(c => new Date(c.periodStart).toISOString().split('T')[0]))
+
+                      return (
+                        <button
+                          type="button"
+                          key={h.id}
+                          onClick={() => navigate(`/habits?id=${h.id}`)}
+                          className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-[4px] hover:bg-base-800/40 hover:text-base-100 transition-colors text-left w-full cursor-pointer"
+                        >
+                          {h.todayCompleted ? (
+                            <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                          ) : (
+                            <Circle className="size-4 text-base-600 shrink-0" />
+                          )}
+                          <span className={`flex-1 text-[14px] font-mono truncate ${h.todayCompleted ? 'text-base-400 line-through' : 'text-base-200'}`}>
+                            {h.title}
+                          </span>
+                          {h.currentStreak !== undefined && h.currentStreak > 0 && (
+                            <span className="flex items-center gap-1 text-[12px] text-orange-400 font-mono shrink-0 mr-2">
+                              <Flame className="size-3" />
+                              {h.currentStreak}
+                            </span>
+                          )}
+
+                          {/* 2 rows, 7 columns compact heatmap */}
+                          <div className="grid grid-rows-2 grid-flow-col gap-[2px] shrink-0 mr-3">
+                            {Array.from({ length: 14 }).map((_, idx) => {
+                              const d = new Date()
+                              d.setDate(d.getDate() - (13 - idx))
+                              const dStr = d.toISOString().split('T')[0]
+                              const completed = completedDates.has(dStr)
+                              return (
+                                <div
+                                  key={idx}
+                                  className={cn(
+                                    "size-[6px] rounded-[0.5px] transition-all",
+                                    completed ? "bg-accent" : "bg-base-850 border border-base-800/50"
+                                  )}
+                                />
+                              )
+                            })}
+                          </div>
+
+                          <span className="text-[12px] text-base-600 font-mono uppercase shrink-0">{h.frequency}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-[13px] text-base-600 font-mono py-2">No active habits.</p>
+                )}
+                {b.habits.total > 0 && (
+                  <div className="mt-2 text-[12px] text-base-500 font-mono">
+                    {b.habits.completed}/{b.habits.total} completed today
+                  </div>
+                )}
+              </BriefingSection>
+            </div>
+
+            <div className="space-y-3">
+              {b.aiSuggestion && (
+                <BriefingSection icon={Sparkles} title="AI Recommendation">
+                  <p className="text-[14px] text-base-300 font-mono leading-relaxed">{b.aiSuggestion}</p>
+                </BriefingSection>
+              )}
+
+              <BriefingSection icon={FolderOpen} title="Projects">
+                {b.projects.projects.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {b.projects.projects.map((p) => (
+                      <div key={p.id}
+                        className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-[4px] hover:bg-base-800/40 transition-colors"
+                      >
+                        <div className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: p.color || '#f59e0b' }} />
+                        <span className="flex-1 text-[14px] text-base-200 font-mono truncate">{p.name}</span>
+                        <span className="text-[12px] text-base-600 font-mono tabular-nums">{p.taskCount}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[13px] text-base-600 font-mono py-2">No active projects.</p>
+                )}
+              </BriefingSection>
+
+              <BriefingSection icon={Clock} title="Recent Activity">
+                {b.recentActivity.length > 0 ? (
+                  <div className="space-y-0">
+                    {b.recentActivity.slice(0, 8).map((activity, i) => (
+                      <div key={i} className="flex items-start gap-2 py-1.5">
+                        <div className="mt-1 size-1.5 rounded-full bg-base-600 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] text-base-200 font-mono truncate">{activity.title}</p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[12px] text-base-500 font-mono">{activity.action}</span>
+                            <span className="text-[12px] text-base-700 font-mono">{formatRelativeTime(activity.timestamp)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[13px] text-base-600 font-mono py-2">No recent activity.</p>
+                )}
+              </BriefingSection>
             </div>
           </div>
         </div>
@@ -93,10 +369,18 @@ export function DashboardPage() {
     )
   }
 
-  return (
-    <div className="h-full overflow-y-auto">
-      <div className="h-full flex flex-col">
-        <div className="p-4 space-y-4">
+  if (legacyData) {
+    const d = legacyData as DashboardData
+    const isEmpty = d.stats.conversations === 0 && d.stats.memories === 0 && d.stats.images === 0 && d.stats.debugSessions === 0
+
+    if (isEmpty) {
+      return <EmptyDashboard firstName={firstName} />
+    }
+
+    return (
+      <div className="h-full overflow-y-auto">
+        <div className="h-full flex flex-col">
+          <div className="p-4 space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-sm font-medium text-base-100 font-mono">Dashboard</h1>
@@ -195,11 +479,7 @@ export function DashboardPage() {
                           <p className="text-[14px] text-base-200 font-mono">{d.brain.name}</p>
                         </div>
                       </div>
-        ) : dashLoading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="size-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : (
+                    ) : (
                       <div className="text-center py-2">
                         <Sparkles className="size-4 text-base-700 mx-auto mb-1" />
                         <p className="text-[13px] text-base-600 font-mono">No identity saved yet</p>
@@ -293,7 +573,10 @@ export function DashboardPage() {
               </div>
             </div>
           </div>
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
+
+  return <EmptyDashboard firstName={firstName} />
 }

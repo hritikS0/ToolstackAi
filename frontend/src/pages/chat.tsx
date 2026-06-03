@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Composer } from '@/components/chat/composer'
 import { MessageBlock } from '@/components/chat/message-block'
 import { formatRelativeTime } from '@/lib/utils'
-import { MessageSquare, Plus, Loader2, AlertTriangle, BrainCircuit } from 'lucide-react'
+import { MessageSquare, Plus, Loader2, AlertTriangle, BrainCircuit, Bug, Code, Lightbulb, Sparkles } from 'lucide-react'
 import type { Message, Conversation } from '@/types/api'
+import { motion } from 'framer-motion'
 
 const THINKING_MESSAGES = [
   'Thinking...',
@@ -16,6 +17,33 @@ const THINKING_MESSAGES = [
   'Reviewing information...',
   'Working through it...',
   'Looking into that...',
+]
+
+const STARTERS = [
+  {
+    icon: Bug,
+    title: 'Analyze & Debug Code',
+    description: 'Find bugs, logical errors, or clean up messy code snippets.',
+    prompt: 'Can you analyze this code and identify any potential bugs or performance bottlenecks?\n\n```\n// Paste your code here\n```'
+  },
+  {
+    icon: Code,
+    title: 'Generate Functions',
+    description: 'Write boilerplate, helpers, or specific logic in any language.',
+    prompt: 'Write a helper function to do the following:\n- '
+  },
+  {
+    icon: Lightbulb,
+    title: 'Explain Complex Logic',
+    description: 'Understand deep code flows, patterns, or architecture.',
+    prompt: 'Can you explain how this concept works in detail with examples?\n- '
+  },
+  {
+    icon: Sparkles,
+    title: 'Optimize Performance',
+    description: 'Refactor algorithms or database queries to run faster.',
+    prompt: 'How can I optimize the performance of this code/query?\n\n'
+  }
 ]
 
 export function ChatPage() {
@@ -30,6 +58,8 @@ export function ChatPage() {
   const [streamError, setStreamError] = useState<string | null>(null)
   const [attachedImage, setAttachedImage] = useState<{ file: File; preview: string } | null>(null)
   const [localImagePreviews, setLocalImagePreviews] = useState<Record<string, string>>({})
+  const localImagePreviewsRef = useRef(localImagePreviews)
+  localImagePreviewsRef.current = localImagePreviews
   const [brainNoti, setBrainNoti] = useState<string | null>(null)
   const brainNotiTimer = useRef<ReturnType<typeof setTimeout>>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -167,7 +197,8 @@ export function ChatPage() {
         if (thinkingRef.current.timerId) clearTimeout(thinkingRef.current.timerId)
         thinkingRef.current.active = false
         setIsThinking(false)
-        queryClient.invalidateQueries({ queryKey: ['messages', convId] })
+        await queryClient.refetchQueries({ queryKey: ['messages', convId] })
+        setOptimisticUserMsg(null)
         queryClient.invalidateQueries({ queryKey: ['conversations'] })
       }
       return
@@ -236,7 +267,6 @@ export function ChatPage() {
   useEffect(() => {
     if (prevIdRef.current !== id) {
       prevIdRef.current = id
-      setLocalImagePreviews({})
       if (!isStreaming) {
         setOptimisticUserMsg(null)
         setStreamingContent('')
@@ -269,6 +299,9 @@ export function ChatPage() {
 
   useEffect(() => {
     return () => {
+      for (const url of Object.values(localImagePreviewsRef.current)) {
+        URL.revokeObjectURL(url)
+      }
       if (brainNotiTimer.current) clearTimeout(brainNotiTimer.current)
       if (thinkingMsgInterval.current) clearInterval(thinkingMsgInterval.current)
       if (thinkingRef.current.timerId) clearTimeout(thinkingRef.current.timerId)
@@ -304,6 +337,53 @@ export function ChatPage() {
               <div className="flex items-center justify-center h-full">
                 <Loader2 className="size-4 animate-spin text-base-500" />
               </div>
+            ) : messages.length === 0 && !optimisticUserMsg && !isStreaming && !isThinking && !streamingContent ? (
+              <div className="flex flex-col items-center justify-center min-h-full py-12 px-6 text-center max-w-2xl mx-auto">
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                  className="flex flex-col items-center justify-center w-full"
+                >
+                  <div className="relative mb-6">
+                    <div className="absolute -inset-1 rounded-full bg-accent/20 blur-md animate-pulse" />
+                    <div className="relative size-16 rounded-[4px] border border-base-700 bg-base-950 flex items-center justify-center text-accent">
+                      <BrainCircuit className="size-8" />
+                    </div>
+                  </div>
+                  
+                  <h1 className="text-base sm:text-lg font-semibold text-base-100 tracking-tight font-mono mb-2">
+                    New Chat Session
+                  </h1>
+                  
+                  <p className="text-[13px] text-base-400 max-w-md mb-8 leading-relaxed font-mono">
+                    Ask a question, paste code to debug, or try one of the quick starters below to begin.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
+                    {STARTERS.map((starter, index) => {
+                      const Icon = starter.icon
+                      return (
+                        <button
+                          key={index}
+                          onClick={() => setInput(starter.prompt)}
+                          className="flex flex-col items-start p-4 text-left rounded-[4px] border border-base-800 bg-base-950 hover:border-accent/40 hover:bg-base-900 transition-all duration-200 cursor-pointer group w-full"
+                        >
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <Icon className="size-4 text-base-400 group-hover:text-accent transition-colors duration-200" />
+                            <span className="text-[13px] font-semibold text-base-200 group-hover:text-base-50 transition-colors duration-200 font-mono">
+                              {starter.title}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-base-500 leading-normal group-hover:text-base-400 transition-colors duration-200 font-mono">
+                            {starter.description}
+                          </p>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </motion.div>
+              </div>
             ) : (
               <div className="max-w-4xl mx-auto py-5 px-5 space-y-5">
                 {(messages as Message[]).filter(m => {
@@ -316,7 +396,7 @@ export function ChatPage() {
                     role={msg.role as 'user' | 'assistant'}
                     content={msg.content}
                     timestamp={msg.createdAt ? formatRelativeTime(msg.createdAt) : undefined}
-                    imageUrl={msg.role === 'user' ? (localImagePreviews[msg.content] || undefined) : undefined}
+                    imageUrl={msg.role === 'user' ? (msg.chatMedia?.url || localImagePreviews[msg.content] || undefined) : undefined}
                   />
                 ))}
 

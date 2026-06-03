@@ -8,84 +8,85 @@ datasource db {
 }
 
 model User {
-  id       String @id @default(cuid())
-  email    String @unique
-  password String
-  fullName String
-
-  conversations  Conversation[]
-  toolExecutions ToolExecution[]
-  memories       Memory[]
-  brainSettings   BrainSettings?
-  apiKeys        UserApiKey[]
-  usageRecords   UsageRecord[]
+  id             String          @id @default(cuid())
+  email          String          @unique
+  password       String
+  fullName       String
+  createdAt      DateTime        @default(now())
+  brainSettings  BrainSettings?
   media          ChatMedia[]
+  conversations  Conversation[]
+  memories       Memory[]
+  Project        Project[]
   files          StoredFile[]
-
-  createdAt DateTime @default(now())
+  Thread         Thread[]
+  toolExecutions ToolExecution[]
+  usageRecords   UsageRecord[]
+  apiKeys        UserApiKey[]
+  tasks          Task[]
+  goals          Goal[]
+  habits         Habit[]
+  notes          Note[]
+  researchItems  ResearchItem[]
+  collections    Collection[]
+  automations    Automation[]
 }
 
 model Conversation {
-  id String @id @default(cuid())
-
-  title       String?
-  type        String  @default("chat")
-  storagePath String? @default("")
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
+  id             String          @id @default(cuid())
+  title          String?
+  userId         String
+  createdAt      DateTime        @default(now())
+  type           String          @default("chat")
+  storagePath    String?         @default("")
+  threadId       String?
+  media          ChatMedia[]
+  Thread         Thread?         @relation(fields: [threadId], references: [id])
+  user           User            @relation(fields: [userId], references: [id])
   messages       Message[]
   toolExecutions ToolExecution[]
-  media          ChatMedia[]
-
-  createdAt DateTime @default(now())
+  pdfEmbeddings   PdfEmbedding[]
 }
 
 model Message {
-  id String @id @default(cuid())
-
+  id             String       @id @default(cuid())
   conversationId String
+  role           String
+  content        String
+  chatMediaId    String?
+  createdAt      DateTime     @default(now())
   conversation   Conversation @relation(fields: [conversationId], references: [id])
-
-  role    String
-  content String
-
-  createdAt DateTime @default(now())
+  chatMedia      ChatMedia?   @relation(fields: [chatMediaId], references: [id])
 }
 
 model ToolExecution {
-  id String @id @default(cuid())
-
+  id             String        @id @default(cuid())
   conversationId String?
+  toolName       String
+  status         String
+  input          Json
+  output         Json
+  startedAt      DateTime      @default(now())
+  completedAt    DateTime?
+  userId         String?
   conversation   Conversation? @relation(fields: [conversationId], references: [id])
-
-  userId String?
-  user   User?    @relation(fields: [userId], references: [id])
-
-  toolName String
-  status   String
-
-  input  Json
-  output Json
-
-  startedAt   DateTime  @default(now())
-  completedAt DateTime?
+  user           User?         @relation(fields: [userId], references: [id])
 }
+
 model Memory {
   id         String   @id @default(cuid())
   userId     String
-  category   String
-  title      String
   content    String
-  importance Int      @default(1)
+  category   String
+  createdAt  DateTime @default(now())
   confidence Float    @default(1.0)
+  importance Int      @default(1)
   pinned     Boolean  @default(false)
   source     String?
-  createdAt  DateTime @default(now())
+  title      String
   updatedAt  DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+  Goal       Goal[]
 }
 
 model BrainSettings {
@@ -97,8 +98,7 @@ model BrainSettings {
   retentionDays Int      @default(365)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id])
+  user          User     @relation(fields: [userId], references: [id])
 }
 
 model UserApiKey {
@@ -109,8 +109,7 @@ model UserApiKey {
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id])
+  user         User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, provider])
 }
@@ -123,22 +122,21 @@ model UsageRecord {
   tokens    Int
   cost      Float    @default(0)
   createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model ChatMedia {
-  id             String   @id @default(cuid())
+  id             String        @id @default(cuid())
   conversationId String?
   userId         String
   fileName       String
   mimeType       String
   filePath       String
-  mediaType      String   @default("image")
-  createdAt      DateTime @default(now())
-
-  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  user         User          @relation(fields: [userId], references: [id])
+  mediaType      String        @default("image")
+  createdAt      DateTime      @default(now())
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User          @relation(fields: [userId], references: [id])
+  messages       Message[]
 }
 
 model StoredFile {
@@ -152,6 +150,184 @@ model StoredFile {
   size        Int      @default(0)
   mimeType    String   @default("application/octet-stream")
   createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id])
+}
 
-  user User @relation(fields: [userId], references: [id])
+model Task {
+  id          String    @id @default(cuid())
+  userId      String
+  projectId   String?
+  title       String
+  description String    @default("")
+  priority    String    @default("medium")
+  status      String    @default("todo")
+  dueDate     DateTime?
+  tags        String[]  @default([])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id])
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+}
+
+model Goal {
+  id          String    @id @default(cuid())
+  userId      String
+  projectId   String?
+  title       String
+  description String    @default("")
+  targetDate  DateTime?
+  status      String    @default("active")
+  progress    Int       @default(0)
+  sourceMemoryId String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user         User        @relation(fields: [userId], references: [id])
+  project      Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  milestones   Milestone[]
+  sourceMemory Memory?     @relation(fields: [sourceMemoryId], references: [id], onDelete: SetNull)
+}
+
+model Milestone {
+  id          String   @id @default(cuid())
+  goalId      String
+  title       String
+  description String   @default("")
+  status      String   @default("pending")
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  goal Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+}
+
+model Habit {
+  id          String   @id @default(cuid())
+  userId      String
+  projectId   String?
+  title       String
+  description String   @default("")
+  frequency   String
+  targetCount String?   @default("1")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User              @relation(fields: [userId], references: [id])
+  project     Project?          @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  completions HabitCompletion[]
+}
+
+model HabitCompletion {
+  id          String   @id @default(cuid())
+  habitId     String
+  completedAt DateTime @default(now())
+  periodStart DateTime
+
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  userId    String
+  projectId String?
+  title     String
+  content   String   @default("")
+  tags      String[] @default([])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id])
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+}
+
+model ResearchItem {
+  id           String    @id @default(cuid())
+  userId       String
+  collectionId String
+  title        String
+  type         String
+  content      String    @default("")
+  sourceUrl    String?
+  tags         String[]  @default([])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user       User       @relation(fields: [userId], references: [id])
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+}
+
+model Collection {
+  id          String   @id @default(cuid())
+  userId      String
+  projectId   String?
+  name        String
+  description String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user    User           @relation(fields: [userId], references: [id])
+  project Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  items   ResearchItem[]
+}
+
+model Automation {
+  id           String   @id @default(cuid())
+  userId       String
+  projectId    String?
+  title        String
+  triggerType  String
+  schedule     String?
+  actionType   String
+  actionConfig Json      @default("{}")
+  enabled      Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id])
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String   @default("")
+  icon        String   @default("folder")
+  color       String   @default("#f59e0b")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  User        User     @relation(fields: [userId], references: [id])
+  Thread      Thread[]
+  tasks       Task[]
+  goals       Goal[]
+  notes       Note[]
+  habits      Habit[]
+  collections Collection[]
+  automations Automation[]
+}
+
+model Thread {
+  id           String         @id @default(cuid())
+  userId       String
+  projectId    String
+  title        String
+  description  String         @default("")
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  Conversation Conversation[]
+  Project      Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  User         User           @relation(fields: [userId], references: [id])
+}
+
+model PdfEmbedding {
+  id             String       @id @default(cuid())
+  conversationId String
+  chunkIndex     Int
+  text           String
+  vector         Float[]
+  createdAt      DateTime     @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 }

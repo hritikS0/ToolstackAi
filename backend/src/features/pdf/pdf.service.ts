@@ -11,6 +11,7 @@ import {
   getSignedUrl,
   deleteFile,
 } from "../../services/storage.service.js";
+import { getUserKey } from "../api-keys/api-keys.service.js";
 const documentStores = new Map<string, InMemoryVectorStore>();
 
 async function extractPdfText(filePath: string): Promise<string> {
@@ -92,6 +93,15 @@ export async function processPdfUpload(
 
   documentStores.set(document.id, store);
 
+  await prisma.pdfEmbedding.createMany({
+    data: results.map(({ chunkIndex, text, vector }) => ({
+      conversationId: document.id,
+      chunkIndex,
+      text,
+      vector,
+    })),
+  });
+
   return { documentId: document.id, name: file.originalname, chunks: chunks.length };
 }
 
@@ -126,9 +136,95 @@ export async function answerPdfQuestion(
   documentId: string,
   userId: string,
 ): Promise<{ answer: string }> {
-  const store = documentStores.get(documentId);
+  let store = documentStores.get(documentId);
+
   if (!store) {
-    throw Object.assign(new Error("Document not found. Please upload the PDF again."), { statusCode: 404 });
+    const prisma = getPrismaClient();
+    const embeddings = await prisma.pdfEmbedding.findMany({
+      where: { conversationId: documentId },
+      orderBy: { chunkIndex: "asc" },
+    });
+
+    if (embeddings.length > 0) {
+      store = new InMemoryVectorStore();
+      for (const e of embeddings) {
+        await store.storeEmbedding(`${documentId}-chunk-${e.chunkIndex}`, e.vector, {
+          documentId,
+          chunkIndex: e.chunkIndex,
+          text: e.text,
+        });
+      }
+      documentStores.set(documentId, store);
+      logger.info({ documentId, chunks: embeddings.length }, "Rehydrated PDF embeddings from database");
+    }
+  }
+
+  if (!store) {
+    const prisma = getPrismaClient();
+    const conv = await prisma.conversation.findUnique({
+      where: { id: documentId },
+      select: { storagePath: true },
+    });
+
+    if (!conv?.storagePath) {
+      throw Object.assign(new Error("Document not found. Please upload the PDF again."), { statusCode: 404 });
+    }
+
+    const signedUrl = await getSignedUrl(conv.storagePath, "pdfs");
+    const response = await fetch(signedUrl);
+    if (!response.ok) {
+      throw Object.assign(new Error("Failed to retrieve document from storage"), { statusCode: 500 });
+    }
+
+    const pdfBuffer = Buffer.from(await response.arrayBuffer());
+    const { PDFParse } = await import("pdf-parse");
+    const pdf = new PDFParse({ data: new Uint8Array(pdfBuffer) });
+    const textResult = await pdf.getText();
+    pdf.destroy().catch(() => {});
+    const extractedText = textResult.text || "";
+
+    if (!extractedText.trim()) {
+      throw Object.assign(new Error("Could not extract text from document"), { statusCode: 422 });
+    }
+
+    const chunks = await chunkText(extractedText);
+    store = new InMemoryVectorStore();
+
+    const CONCURRENCY = 3;
+    const results: { chunkId: string; vector: number[]; chunkIndex: number; text: string }[] = [];
+
+    for (let i = 0; i < chunks.length; i += CONCURRENCY) {
+      const batch = chunks.slice(i, i + CONCURRENCY);
+      const batchResults = await Promise.allSettled(
+        batch.map(async (text, j) => {
+          const chunkIndex = i + j;
+          const vector = await generateEmbedding(text, "passage", userId);
+          return { chunkId: `${documentId}-chunk-${chunkIndex}`, vector, chunkIndex, text };
+        }),
+      );
+
+      for (const r of batchResults) {
+        if (r.status === "fulfilled") results.push(r.value);
+        else logger.error({ err: r.reason }, "Failed to embed PDF chunk during rehydration");
+      }
+    }
+
+    for (const { chunkId, vector, chunkIndex, text } of results) {
+      await store.storeEmbedding(chunkId, vector, { documentId, chunkIndex, text });
+    }
+
+    documentStores.set(documentId, store);
+
+    await prisma.pdfEmbedding.createMany({
+      data: results.map(({ chunkIndex, text, vector }) => ({
+        conversationId: documentId,
+        chunkIndex,
+        text,
+        vector,
+      })),
+    });
+
+    logger.info({ documentId, chunks: results.length }, "Re-embedded PDF from Supabase and persisted");
   }
 
   const questionVector = await generateEmbedding(question, "query", userId);
@@ -150,10 +246,11 @@ export async function answerPdfQuestion(
   logger.info({ contextLength: truncated.length, documentId }, "answerPdfQuestion prompt");
 
   try {
+    const userKey = await getUserKey(userId, "nvidia");
     const completion = await nvidia.chatCompletion([
       { role: "system", content: "You are a document analysis assistant. Answer concisely based only on the provided context." },
       { role: "user", content: `Context:\n${truncated}\n\nQuestion: ${question}` },
-    ]);
+    ], userKey ? { apiKey: userKey } : {});
     const answer = completion.choices[0]?.message?.content || "No response generated.";
 
     logger.info({ answerLength: answer.length }, "answerPdfQuestion response");

@@ -69,10 +69,12 @@ export async function visionChat(
 
   const answer = data.choices[0]?.message?.content || "No response generated.";
 
+  const media = await saveMedia(file.path, file.originalname, mimeType, conversationId, userId, "image");
+
   const prisma = getPrismaClient();
   await prisma.$transaction([
     prisma.message.create({
-      data: { conversationId, role: "user", content: message },
+      data: { conversationId, role: "user", content: message, chatMediaId: media.id },
     }),
     prisma.message.create({
       data: { conversationId, role: "assistant", content: answer },
@@ -90,8 +92,6 @@ export async function visionChat(
       },
     }),
   ]);
-
-  await saveMedia(file.path, file.originalname, mimeType, conversationId, userId, "image");
 
   const memorySaved = await autoExtractMemories(message, userId).catch(() => 0);
 

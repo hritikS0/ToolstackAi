@@ -207,7 +207,7 @@ export async function autoExtractMemories(userMessage: string, userId: string): 
         continue;
       }
 
-      await prisma.memory.create({
+      const created = await prisma.memory.create({
         data: {
           userId,
           category: mem.category || "Personal",
@@ -219,6 +219,33 @@ export async function autoExtractMemories(userMessage: string, userId: string): 
         },
       });
       saved++;
+
+      if (mem.category === "Goals") {
+        const existingGoal = await prisma.goal.findFirst({
+          where: { userId, title: mem.title },
+        });
+        if (!existingGoal) {
+          const goal = await prisma.goal.create({
+            data: {
+              userId,
+              title: mem.title,
+              description: mem.content,
+              status: "active",
+              progress: 0,
+              sourceMemoryId: created.id,
+            },
+          });
+          await prisma.milestone.create({
+            data: {
+              goalId: goal.id,
+              title: mem.title,
+              description: mem.content,
+              status: "pending",
+              order: 1,
+            },
+          });
+        }
+      }
     }
   } catch (err) {
     logger.error({ err, userId }, "Memory extraction failed");
