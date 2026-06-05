@@ -272,13 +272,13 @@ export function TasksPage() {
           </Button>
         </div>
 
-        <div className="flex items-center gap-2 mb-4">
-          <div className="flex items-center gap-1">
-            <Filter className="size-3 text-base-600" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-1 overflow-x-auto whitespace-nowrap pb-1.5 -mb-1.5 max-w-full">
+            <Filter className="size-3 text-base-600 shrink-0" />
             <button
               type="button"
               onClick={() => setStatusFilter('')}
-              className={`px-2 py-0.5 rounded-[2px] text-[9px] font-mono transition-colors ${
+              className={`px-2 py-0.5 rounded-[2px] text-[9px] font-mono transition-colors shrink-0 ${
                 !statusFilter ? 'bg-accent-muted text-accent' : 'text-base-500 hover:text-base-300 hover:bg-base-800'
               }`}
             >
@@ -289,7 +289,7 @@ export function TasksPage() {
                 key={s.value}
                 type="button"
                 onClick={() => setStatusFilter(statusFilter === s.value ? '' : s.value)}
-                className={`px-2 py-0.5 rounded-[2px] text-[9px] font-mono transition-colors ${
+                className={`px-2 py-0.5 rounded-[2px] text-[9px] font-mono transition-colors shrink-0 ${
                   statusFilter === s.value ? 'bg-accent-muted text-accent' : 'text-base-500 hover:text-base-300 hover:bg-base-800'
                 }`}
               >
@@ -298,18 +298,18 @@ export function TasksPage() {
             ))}
           </div>
 
-          <div className="flex-1" />
-
-          <select
-            value={priorityFilter}
-            onChange={e => setPriorityFilter(e.target.value)}
-            className="h-6 rounded-[2px] border border-base-800 bg-base-950 px-1.5 text-[10px] font-mono text-base-400 outline-none"
-          >
-            <option value="">All Priorities</option>
-            {priorities.map(p => (
-              <option key={p.value} value={p.value}>{p.label}</option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            <select
+              value={priorityFilter}
+              onChange={e => setPriorityFilter(e.target.value)}
+              className="h-6 rounded-[2px] border border-base-800 bg-base-950 px-1.5 text-[10px] font-mono text-base-400 outline-none"
+            >
+              <option value="">All Priorities</option>
+              {priorities.map(p => (
+                <option key={p.value} value={p.value}>{p.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {isLoading ? (
@@ -346,8 +346,8 @@ export function TasksPage() {
         )}
 
         {showCreate && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => { if (!createMutation.isPending) setShowCreate(false) }}>
-            <div ref={formRef} className="w-[440px] rounded-[6px] border border-base-800 bg-surface shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => { if (!createMutation.isPending) setShowCreate(false) }}>
+            <div ref={formRef} className="w-full max-w-[440px] rounded-[6px] border border-base-800 bg-surface shadow-2xl" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between h-10 px-3 border-b border-base-800">
                 <span className="text-[11px] font-medium text-base-100 font-mono">New Task</span>
                 <button type="button" onClick={() => setShowCreate(false)} className="size-5 flex items-center justify-center text-base-500 hover:text-base-200">
@@ -446,7 +446,7 @@ export function TasksPage() {
           <div className="fixed inset-0 z-50 flex items-start justify-end" onClick={() => { setSelectedTask(null); setEditMode(false) }}>
             <div className="absolute inset-0 bg-black/40" />
             <div
-              className="relative w-[500px] h-full bg-surface border-l border-base-800 shadow-2xl overflow-y-auto"
+              className="relative w-full sm:w-[500px] h-full bg-surface border-l border-base-800 shadow-2xl overflow-y-auto"
               onClick={e => e.stopPropagation()}
             >
               <div className="sticky top-0 bg-surface z-10">
@@ -585,7 +585,7 @@ export function TasksPage() {
 
                     <div>
                       <span className="text-[10px] text-base-500 font-mono uppercase tracking-wider block mb-1">Change Status</span>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         {statuses.map(s => (
                           <button
                             key={s.value}
