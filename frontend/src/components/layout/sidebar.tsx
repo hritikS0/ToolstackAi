@@ -70,9 +70,11 @@ export function Sidebar({ collapsed, onToggle, onThemeClick }: { collapsed: bool
         collapsed ? 'justify-center px-0' : 'px-3',
       )}>
         {!collapsed && (
-          <span className="text-[14px] font-semibold text-accent tracking-wider uppercase cursor-pointer select-none font-mono" 
-          onClick={() => navigate('/dashboard')}
-          >ToolStack</span>
+          <button
+            type="button"
+            className="text-[14px] font-semibold text-accent tracking-wider uppercase cursor-pointer select-none font-mono focus:outline-none focus:ring-1 focus:ring-accent rounded px-1 text-left" 
+            onClick={() => navigate('/dashboard')}
+          >ToolStack</button>
         )}
         <div className={collapsed ? '' : 'flex-1'} />
         <button type="button"
@@ -93,9 +95,16 @@ export function Sidebar({ collapsed, onToggle, onThemeClick }: { collapsed: bool
             {/* Chat Group */}
             <div className="space-y-1">
               <div 
+                role="button"
+                tabIndex={0}
                 onClick={() => navigate('/chat')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    navigate('/chat')
+                  }
+                }}
                 className={cn(
-                  "group flex items-center justify-between h-7 px-2 rounded-[4px] text-[11px] font-semibold text-base-400 hover:text-base-200 hover:bg-base-800/40 cursor-pointer select-none transition-colors",
+                  "group flex items-center justify-between h-7 px-2 rounded-[4px] text-[11px] font-semibold text-base-400 hover:text-base-200 hover:bg-base-800/40 cursor-pointer select-none transition-colors focus:outline-none focus:ring-1 focus:ring-accent-muted",
                   location.pathname === '/chat' && "bg-base-800/60 text-base-100"
                 )}
               >
@@ -154,9 +163,16 @@ export function Sidebar({ collapsed, onToggle, onThemeClick }: { collapsed: bool
             {/* PDF Chat Group */}
             <div className="space-y-1">
               <div 
+                role="button"
+                tabIndex={0}
                 onClick={() => navigate('/pdf')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    navigate('/pdf')
+                  }
+                }}
                 className={cn(
-                  "group flex items-center justify-between h-7 px-2 rounded-[4px] text-[11px] font-semibold text-base-400 hover:text-base-200 hover:bg-base-800/40 cursor-pointer select-none transition-colors",
+                  "group flex items-center justify-between h-7 px-2 rounded-[4px] text-[11px] font-semibold text-base-400 hover:text-base-200 hover:bg-base-800/40 cursor-pointer select-none transition-colors focus:outline-none focus:ring-1 focus:ring-accent-muted",
                   location.pathname === '/pdf' && "bg-base-800/60 text-base-100"
                 )}
               >

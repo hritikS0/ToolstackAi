@@ -104,7 +104,6 @@ export function UserMenu() {
           <MenuItem icon={<User className="size-3.5" />} label="Profile" onClick={() => { setOpen(false); navigate('/settings') }} />
           <MenuItem icon={<Settings className="size-3.5" />} label="Settings" onClick={() => { setOpen(false); navigate('/settings') }} />
           <MenuItem icon={<Palette className="size-3.5" />} label="Theme" onClick={() => { setOpen(false); navigate('/settings') }} />
-          <MenuItem icon={<Keyboard className="size-3.5" />} label="Keyboard shortcuts" shortcut="⌘K" onClick={() => { setOpen(false) }} />
           <MenuItem icon={<HelpCircle className="size-3.5" />} label="Help" onClick={() => { setOpen(false) }} />
 
           <div className="h-px bg-base-800 my-1 mx-2" />

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useReducer } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   FolderOpen, Plus, Trash2, Edit3, Loader2, Folder, Code, BookOpen, Heart,
@@ -31,6 +31,47 @@ const PRESET_ICONS = [
   { value: 'sparkles', icon: Sparkles },
 ]
 
+interface FormState {
+  name: string
+  description: string
+  color: string
+  icon: string
+}
+
+type FormAction =
+  | { type: 'SET_NAME'; payload: string }
+  | { type: 'SET_DESCRIPTION'; payload: string }
+  | { type: 'SET_COLOR'; payload: string }
+  | { type: 'SET_ICON'; payload: string }
+  | { type: 'RESET_FORM' }
+  | { type: 'SET_FORM'; payload: FormState }
+
+const initialFormState: FormState = {
+  name: '',
+  description: '',
+  color: '#3b82f6',
+  icon: 'folder',
+}
+
+function formReducer(state: FormState, action: FormAction): FormState {
+  switch (action.type) {
+    case 'SET_NAME':
+      return { ...state, name: action.payload }
+    case 'SET_DESCRIPTION':
+      return { ...state, description: action.payload }
+    case 'SET_COLOR':
+      return { ...state, color: action.payload }
+    case 'SET_ICON':
+      return { ...state, icon: action.payload }
+    case 'RESET_FORM':
+      return initialFormState
+    case 'SET_FORM':
+      return action.payload
+    default:
+      return state
+  }
+}
+
 export function ProjectsPage() {
   const queryClient = useQueryClient()
 
@@ -38,11 +79,8 @@ export function ProjectsPage() {
   const [editingProject, setEditingProject] = useState<Project | null>(null)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
 
-  // Form states
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [color, setColor] = useState('#3b82f6')
-  const [icon, setIcon] = useState('folder')
+  // Form states grouped in a reducer
+  const [formState, dispatchForm] = useReducer(formReducer, initialFormState)
 
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ['projects'],
@@ -95,31 +133,28 @@ export function ProjectsPage() {
   })
 
   const resetForm = () => {
-    setName('')
-    setDescription('')
-    setColor('#3b82f6')
-    setIcon('folder')
+    dispatchForm({ type: 'RESET_FORM' })
   }
 
   const handleCreate = () => {
-    if (!name.trim()) return
+    if (!formState.name.trim()) return
     createMutation.mutate({
-      name: name.trim(),
-      description: description.trim() || undefined,
-      color,
-      icon,
+      name: formState.name.trim(),
+      description: formState.description.trim() || undefined,
+      color: formState.color,
+      icon: formState.icon,
     })
   }
 
   const handleUpdate = () => {
-    if (!editingProject || !name.trim()) return
+    if (!editingProject || !formState.name.trim()) return
     updateMutation.mutate({
       id: editingProject.id,
       data: {
-        name: name.trim(),
-        description: description.trim() || undefined,
-        color,
-        icon,
+        name: formState.name.trim(),
+        description: formState.description.trim() || undefined,
+        color: formState.color,
+        icon: formState.icon,
       },
     })
   }
@@ -182,9 +217,16 @@ export function ProjectsPage() {
               return (
                 <div
                   key={p.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setSelectedProject(p)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      setSelectedProject(p)
+                    }
+                  }}
                   className={cn(
-                    "relative overflow-hidden rounded-[4px] border border-base-800 bg-surface/50 hover:bg-surface-alt/50 transition-all p-3.5 cursor-pointer group flex flex-col justify-between h-[110px]",
+                    "relative overflow-hidden rounded-[4px] border border-base-800 bg-surface/50 hover:bg-surface-alt/50 transition-all p-3.5 cursor-pointer group flex flex-col justify-between h-[110px] focus:outline-none focus:ring-1 focus:ring-accent-muted",
                     selectedProject?.id === p.id && "border-accent-muted bg-surface-alt"
                   )}
                   style={{ borderLeft: `3px solid ${p.color || '#3b82f6'}` }}
@@ -203,10 +245,15 @@ export function ProjectsPage() {
                           onClick={(e) => {
                             e.stopPropagation()
                             setEditingProject(p)
-                            setName(p.name)
-                            setDescription(p.description || '')
-                            setColor(p.color || '#3b82f6')
-                            setIcon(p.icon || 'folder')
+                            dispatchForm({
+                              type: 'SET_FORM',
+                              payload: {
+                                name: p.name,
+                                description: p.description || '',
+                                color: p.color || '#3b82f6',
+                                icon: p.icon || 'folder'
+                              }
+                            })
                           }}
                           className="size-5 rounded flex items-center justify-center hover:bg-base-800 text-base-500 hover:text-base-300 transition-colors"
                           title="Edit"
@@ -390,15 +437,15 @@ export function ProjectsPage() {
             </div>
             <div className="p-3 space-y-3">
               <Input
-                value={name}
-                onChange={e => setName(e.target.value)}
+                value={formState.name}
+                onChange={e => dispatchForm({ type: 'SET_NAME', payload: e.target.value })}
                 placeholder="Project name"
                 className="h-8 text-[12px]"
                 autoFocus
               />
               <textarea
-                value={description}
-                onChange={e => setDescription(e.target.value)}
+                value={formState.description}
+                onChange={e => dispatchForm({ type: 'SET_DESCRIPTION', payload: e.target.value })}
                 placeholder="Description (optional)"
                 className="w-full h-16 rounded-[4px] border border-base-800 bg-surface px-2 py-1.5 text-[11px] text-base-100 placeholder:text-base-600 font-mono focus:outline-none focus:border-accent/50 transition-colors resize-none"
               />
@@ -411,15 +458,15 @@ export function ProjectsPage() {
                     <button
                       key={c.value}
                       type="button"
-                      onClick={() => setColor(c.value)}
+                      onClick={() => dispatchForm({ type: 'SET_COLOR', payload: c.value })}
                       className={cn(
                         "size-5 rounded-full border border-base-800 transition-all cursor-pointer relative flex items-center justify-center hover:scale-110",
-                        color === c.value && "scale-110 border-white/60"
+                        formState.color === c.value && "scale-110 border-white/60"
                       )}
                       style={{ backgroundColor: c.value }}
                       title={c.label}
                     >
-                      {color === c.value && <div className="size-1.5 rounded-full bg-white" />}
+                      {formState.color === c.value && <div className="size-1.5 rounded-full bg-white" />}
                     </button>
                   ))}
                 </div>
@@ -435,10 +482,10 @@ export function ProjectsPage() {
                       <button
                         key={pi.value}
                         type="button"
-                        onClick={() => setIcon(pi.value)}
+                        onClick={() => dispatchForm({ type: 'SET_ICON', payload: pi.value })}
                         className={cn(
                           "size-8 rounded-[4px] border border-base-800 bg-surface-alt text-base-500 hover:text-base-200 transition-colors cursor-pointer flex items-center justify-center hover:scale-105",
-                          icon === pi.value && "border-accent text-accent bg-base-800"
+                          formState.icon === pi.value && "border-accent text-accent bg-base-800"
                         )}
                         title={pi.value}
                       >
@@ -462,7 +509,7 @@ export function ProjectsPage() {
                 variant="primary"
                 size="sm"
                 onClick={editingProject ? handleUpdate : handleCreate}
-                disabled={!name.trim() || createMutation.isPending || updateMutation.isPending}
+                disabled={!formState.name.trim() || createMutation.isPending || updateMutation.isPending}
               >
                 {editingProject ? 'Save' : 'Create'}
               </Button>

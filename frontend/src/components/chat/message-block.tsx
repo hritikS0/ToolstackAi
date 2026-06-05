@@ -79,6 +79,23 @@ function AssistantMessage({
                     a: ({ href, children }) => (
                       <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
                     ),
+                    table: ({ children }) => (
+                      <div className="overflow-x-auto max-w-full my-3 border border-base-800 rounded-[4px] scrollbar-thin">
+                        <table className="min-w-full divide-y divide-base-800 text-[13px] font-mono">
+                          {children}
+                        </table>
+                      </div>
+                    ),
+                    th: ({ children }) => (
+                      <th className="px-3 py-2 text-left bg-base-950/45 font-semibold text-base-300 border-r border-base-800 last:border-r-0 whitespace-nowrap">
+                        {children}
+                      </th>
+                    ),
+                    td: ({ children }) => (
+                      <td className="px-3 py-2 text-left text-base-200 border-t border-r border-base-800 last:border-r-0 leading-normal min-w-[100px]">
+                        {children}
+                      </td>
+                    ),
                   }}
                 >
                   {safeContent}
