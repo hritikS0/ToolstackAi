@@ -5,6 +5,7 @@ import { projectsService } from '@/services/projects.service'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog } from '@/components/ui/dialog'
+import { Select } from '@/components/ui/select'
 import { formatRelativeTime } from '@/lib/utils'
 import {
   CheckCircle2, Circle, Clock, Flag, Plus, Trash2, Filter,
@@ -401,27 +402,21 @@ export function TasksPage() {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <span className="text-[10px] text-base-500 font-mono block mb-1">Priority</span>
-                    <select
+                    <Select
                       value={form.priority}
-                      onChange={e => setForm({ ...form, priority: e.target.value as Task['priority'] })}
-                      className="w-full h-7 rounded-[2px] border border-base-800 bg-base-950 px-2 text-[11px] font-mono text-base-200 outline-none"
-                    >
-                      {priorities.map(p => (
-                        <option key={p.value} value={p.value}>{p.label}</option>
-                      ))}
-                    </select>
+                      onChange={val => setForm({ ...form, priority: val as Task['priority'] })}
+                      options={priorities}
+                      buttonClassName="h-7 py-0 px-2 text-[11px]"
+                    />
                   </div>
                   <div>
                     <span className="text-[10px] text-base-500 font-mono block mb-1">Status</span>
-                    <select
+                    <Select
                       value={form.status}
-                      onChange={e => setForm({ ...form, status: e.target.value as Task['status'] })}
-                      className="w-full h-7 rounded-[2px] border border-base-800 bg-base-950 px-2 text-[11px] font-mono text-base-200 outline-none"
-                    >
-                      {statuses.map(s => (
-                        <option key={s.value} value={s.value}>{s.label}</option>
-                      ))}
-                    </select>
+                      onChange={val => setForm({ ...form, status: val as Task['status'] })}
+                      options={statuses}
+                      buttonClassName="h-7 py-0 px-2 text-[11px]"
+                    />
                   </div>
                 </div>
                 <div>
@@ -444,16 +439,12 @@ export function TasksPage() {
                 </div>
                 <div>
                   <span className="text-[10px] text-base-500 font-mono block mb-1">Project (optional)</span>
-                  <select
+                  <Select
                     value={form.projectId}
-                    onChange={e => setForm({ ...form, projectId: e.target.value })}
-                    className="w-full h-7 rounded-[2px] border border-base-800 bg-base-950 px-2 text-[11px] font-mono text-base-200 outline-none"
-                  >
-                    <option value="">None</option>
-                    {projects.map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
+                    onChange={val => setForm({ ...form, projectId: val })}
+                    options={[{ value: '', label: 'None' }, ...projects.map(p => ({ value: p.id, label: p.name }))]}
+                    buttonClassName="h-7 py-0 px-2 text-[11px]"
+                  />
                 </div>
               </div>
               <div className="flex items-center justify-end gap-2 px-3 pb-3">
@@ -506,27 +497,21 @@ export function TasksPage() {
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <span className="text-[10px] text-base-500 font-mono block mb-1">Priority</span>
-                        <select
+                        <Select
                           value={selectedTask.priority}
-                          onChange={e => setSelectedTask({ ...selectedTask, priority: e.target.value as Task['priority'] })}
-                          className="w-full h-7 rounded-[2px] border border-base-800 bg-base-950 px-2 text-[11px] font-mono text-base-200 outline-none"
-                        >
-                          {priorities.map(p => (
-                            <option key={p.value} value={p.value}>{p.label}</option>
-                          ))}
-                        </select>
+                          onChange={val => setSelectedTask({ ...selectedTask, priority: val as Task['priority'] })}
+                          options={priorities}
+                          buttonClassName="h-7 py-0 px-2 text-[11px]"
+                        />
                       </div>
                       <div>
                         <span className="text-[10px] text-base-500 font-mono block mb-1">Status</span>
-                        <select
+                        <Select
                           value={selectedTask.status}
-                          onChange={e => setSelectedTask({ ...selectedTask, status: e.target.value as Task['status'] })}
-                          className="w-full h-7 rounded-[2px] border border-base-800 bg-base-950 px-2 text-[11px] font-mono text-base-200 outline-none"
-                        >
-                          {statuses.map(s => (
-                            <option key={s.value} value={s.value}>{s.label}</option>
-                          ))}
-                        </select>
+                          onChange={val => setSelectedTask({ ...selectedTask, status: val as Task['status'] })}
+                          options={statuses}
+                          buttonClassName="h-7 py-0 px-2 text-[11px]"
+                        />
                       </div>
                     </div>
                     <div>
@@ -548,16 +533,12 @@ export function TasksPage() {
                     </div>
                     <div>
                       <span className="text-[10px] text-base-500 font-mono block mb-1">Project (optional)</span>
-                      <select
+                      <Select
                         value={selectedTask.projectId || ''}
-                        onChange={e => setSelectedTask({ ...selectedTask, projectId: e.target.value || null })}
-                        className="w-full h-7 rounded-[2px] border border-base-800 bg-base-950 px-2 text-[11px] font-mono text-base-200 outline-none"
-                      >
-                        <option value="">None</option>
-                        {projects.map(p => (
-                          <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                      </select>
+                        onChange={val => setSelectedTask({ ...selectedTask, projectId: val || null })}
+                        options={[{ value: '', label: 'None' }, ...projects.map(p => ({ value: p.id, label: p.name }))]}
+                        buttonClassName="h-7 py-0 px-2 text-[11px]"
+                      />
                     </div>
                     <div className="flex items-center gap-2 pt-1">
                       <Button variant="ghost" size="sm" onClick={() => setEditMode(false)}>Cancel</Button>

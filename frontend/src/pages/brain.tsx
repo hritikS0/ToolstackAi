@@ -9,6 +9,7 @@ import { MemoryDetailPanel } from '@/components/brain/memory-detail-panel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog } from '@/components/ui/dialog'
+import { Select } from '@/components/ui/select'
 import type { Memory, Goal, Project } from '@/types/api'
 import {
   Brain, Search, Plus, Pin, PinOff, Loader2, AlertTriangle,
@@ -296,15 +297,17 @@ export function BrainPage() {
           </div>
           <div className="flex-1" />
           <div className="relative">
-            <select
+            <Select
               value={sortBy}
-              onChange={e => setSortBy(e.target.value)}
-              className="h-6 rounded-[2px] border border-base-800 bg-base-950 px-1.5 text-[10px] font-mono text-base-400 outline-none"
-            >
-              <option value="newest">Newest</option>
-              <option value="oldest">Oldest</option>
-              <option value="importance">Importance</option>
-            </select>
+              onChange={val => setSortBy(val)}
+              options={[
+                { value: 'newest', label: 'Newest' },
+                { value: 'oldest', label: 'Oldest' },
+                { value: 'importance', label: 'Importance' },
+              ]}
+              buttonClassName="h-6 py-0 px-2 text-[10px] w-24"
+              popoverClassName="w-24 right-0 left-auto"
+            />
           </div>
         </div>
       </div>
@@ -598,18 +601,21 @@ export function BrainPage() {
               <div className="text-[11px] font-medium text-base-200 font-mono">Retention Period</div>
               <div className="text-[10px] text-base-500 font-mono">How long to keep memories</div>
             </div>
-            <select
-              value={settings?.retentionDays || 365}
-              onChange={e => brainService.updateSettings({ retentionDays: parseInt(e.target.value) }).then(() => invalidate())}
-              className="h-7 rounded-[2px] border border-base-800 bg-base-950 px-2 text-[11px] font-mono text-base-200 outline-none"
-            >
-              <option value={30}>30 days</option>
-              <option value={90}>90 days</option>
-              <option value={180}>6 months</option>
-              <option value={365}>1 year</option>
-              <option value={730}>2 years</option>
-              <option value={3650}>Forever</option>
-            </select>
+            <Select
+              value={String(settings?.retentionDays || 365)}
+              onChange={val => brainService.updateSettings({ retentionDays: parseInt(val) }).then(() => invalidate())}
+              options={[
+                { value: '30', label: '30 days' },
+                { value: '90', label: '90 days' },
+                { value: '180', label: '6 months' },
+                { value: '365', label: '1 year' },
+                { value: '730', label: '2 years' },
+                { value: '3650', label: 'Forever' },
+              ]}
+              className="w-28 shrink-0"
+              buttonClassName="h-7 py-0 px-2 text-[11px]"
+              popoverClassName="w-28 right-0 left-auto"
+            />
           </div>
         </div>
       </div>

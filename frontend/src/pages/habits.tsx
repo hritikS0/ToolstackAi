@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
+import { Select } from '@/components/ui/select'
 import {
   Flame, CheckCircle2, Plus, Trash2, Loader2, Sparkles, Terminal, ListTodo, X,
   Trophy, Activity, TrendingUp, AlertTriangle
@@ -420,15 +421,16 @@ function CreateHabitDialog({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-[10px] font-medium text-base-400 mb-1 block font-mono uppercase tracking-wider">Frequency</label>
-              <select
+              <Select
                 value={frequency}
-                onChange={e => setFrequency(e.target.value as 'daily' | 'weekly' | 'monthly')}
-                className="w-full h-8 rounded-[4px] border border-base-800 bg-surface px-2.5 text-[12px] text-base-100 font-mono focus:outline-none focus:border-accent/50"
-              >
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-              </select>
+                onChange={val => setFrequency(val as 'daily' | 'weekly' | 'monthly')}
+                options={[
+                  { value: 'daily', label: 'Daily' },
+                  { value: 'weekly', label: 'Weekly' },
+                  { value: 'monthly', label: 'Monthly' },
+                ]}
+                buttonClassName="h-8 py-0 px-2.5 text-[12px] bg-surface"
+              />
             </div>
 
             <div>
@@ -444,16 +446,12 @@ function CreateHabitDialog({
 
           <div>
             <label className="text-[10px] font-medium text-base-400 mb-1 block font-mono uppercase tracking-wider">Project (optional)</label>
-            <select
+            <Select
               value={projectId}
-              onChange={e => setProjectId(e.target.value)}
-              className="w-full h-8 rounded-[4px] border border-base-800 bg-surface px-2.5 text-[12px] text-base-100 font-mono focus:outline-none focus:border-accent/50"
-            >
-              <option value="">None</option>
-              {projects.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
+              onChange={val => setProjectId(val)}
+              options={[{ value: '', label: 'None' }, ...projects.map(p => ({ value: p.id, label: p.name }))]}
+              buttonClassName="h-8 py-0 px-2.5 text-[12px] bg-surface"
+            />
           </div>
         </div>
 
@@ -1089,21 +1087,20 @@ export function HabitsPage() {
                 
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-base-500 font-mono">Habit:</span>
-                  <select
+                  <Select
                     value={selectedHabitId}
-                    onChange={(e) => {
-                      setSelectedHabitId(e.target.value)
+                    onChange={val => {
+                      setSelectedHabitId(val)
                       setSelectedCell(null)
                     }}
-                    className="h-8 rounded-[4px] border border-base-800 bg-surface px-2 text-[12px] text-base-100 font-mono focus:outline-none focus:border-accent/40"
-                  >
-                    <option value="all">All Habits Overview</option>
-                    {activeHabits.map(h => (
-                      <option key={h.id} value={h.id}>
-                        {h.title} (🔥 {h.currentStreak || 0}d)
-                      </option>
-                    ))}
-                  </select>
+                    options={[
+                      { value: 'all', label: 'All Habits Overview' },
+                      ...activeHabits.map(h => ({ value: h.id, label: `${h.title} (🔥 ${h.currentStreak || 0}d)` })),
+                    ]}
+                    className="w-48 shrink-0"
+                    buttonClassName="h-8 py-0 px-2.5 text-[12px] bg-surface"
+                    popoverClassName="w-48 right-0 left-auto"
+                  />
                 </div>
               </div>
 

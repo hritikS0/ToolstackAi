@@ -6,6 +6,7 @@ import { dashboardService } from '@/services/dashboard.service'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog } from '@/components/ui/dialog'
+import { Select } from '@/components/ui/select'
 import { truncate } from '@/lib/utils'
 import type { Goal, Milestone } from '@/types/api'
 import {
@@ -520,16 +521,12 @@ export function GoalsPage() {
               {projects.length > 0 && (
                 <div>
                   <span className="text-[10px] text-base-500 font-mono block mb-1">Project</span>
-                  <select
+                  <Select
                     value={newProjectId}
-                    onChange={e => setNewProjectId(e.target.value)}
-                    className="w-full h-8 rounded-[4px] border border-base-800 bg-surface px-2 text-[11px] text-base-100 font-mono focus:outline-none focus:border-accent/50"
-                  >
-                    <option value="">None</option>
-                    {projects.map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
+                    onChange={val => setNewProjectId(val)}
+                    options={[{ value: '', label: 'None' }, ...projects.map(p => ({ value: p.id, label: p.name }))]}
+                    buttonClassName="h-8 py-0 px-2.5 text-[11px]"
+                  />
                 </div>
               )}
             </div>

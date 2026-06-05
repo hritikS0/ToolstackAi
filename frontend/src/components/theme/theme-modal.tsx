@@ -4,6 +4,7 @@ import type { ThemeConfig, Density, BorderRadius } from '@/themes/types'
 import { ThemeCard } from './theme-card'
 import { PreviewPanel } from './preview-panel'
 import { cn } from '@/lib/utils'
+import { Select } from '@/components/ui/select'
 import { X, Palette, Sliders, Eye, Download, Upload, RotateCcw, Save, Check, ChevronDown } from 'lucide-react'
 
 const fontOptions = [
@@ -223,15 +224,12 @@ export function ThemeModal() {
                   </div>
                   <div>
                     <label className="text-[10px] font-mono text-base-400 block mb-0.5">Font Size</label>
-                    <select
+                    <Select
                       value={theme.typography.fontSize}
-                      onChange={e => updateTheme({ typography: { ...theme.typography, fontSize: e.target.value } })}
-                      className="w-full h-6 rounded-[2px] border border-base-800 bg-base-950 px-1.5 text-[10px] font-mono text-base-200 outline-none focus:border-accent/40"
-                    >
-                      {['15px', '16px', '17px', '18px', '20px'].map(s => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
+                      onChange={val => updateTheme({ typography: { ...theme.typography, fontSize: val } })}
+                      options={['15px', '16px', '17px', '18px', '20px'].map(s => ({ value: s, label: s }))}
+                      buttonClassName="h-6 py-0 px-1.5 text-[10px]"
+                    />
                   </div>
                 </div>
               </div>
