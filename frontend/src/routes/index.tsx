@@ -9,8 +9,8 @@ const RegisterPage = lazy(() => import('@/pages/register').then(m => ({ default:
 const DashboardPage = lazy(() => import('@/pages/dashboard').then(m => ({ default: m.DashboardPage })))
 const ChatPage = lazy(() => import('@/pages/chat').then(m => ({ default: m.ChatPage })))
 const PdfChatPage = lazy(() => import('@/pages/pdf-chat').then(m => ({ default: m.PdfChatPage })))
-const ImageAnalyzerPage = lazy(() => import('@/pages/image-analyzer').then(m => ({ default: m.ImageAnalyzerPage })))
-const CodeDebuggerPage = lazy(() => import('@/pages/code-debugger').then(m => ({ default: m.CodeDebuggerPage })))
+// const ImageAnalyzerPage = lazy(() => import('@/pages/image-analyzer').then(m => ({ default: m.ImageAnalyzerPage })))
+// const CodeDebuggerPage = lazy(() => import('@/pages/code-debugger').then(m => ({ default: m.CodeDebuggerPage })))
 const ConversationsPage = lazy(() => import('@/pages/conversations').then(m => ({ default: m.ConversationsPage })))
 const SettingsPage = lazy(() => import('@/pages/settings').then(m => ({ default: m.SettingsPage })))
 const BrainPage = lazy(() => import('@/pages/brain').then(m => ({ default: m.BrainPage })))
@@ -40,8 +40,8 @@ export function AppRoutes() {
           <Route path="/chat/:id" element={<ChatPage />} />
           <Route path="/pdf" element={<PdfChatPage />} />
           <Route path="/pdf/:id" element={<PdfChatPage />} />
-          <Route path="/image" element={<ImageAnalyzerPage />} />
-          <Route path="/debug" element={<CodeDebuggerPage />} />
+          {/* <Route path="/image" element={<ImageAnalyzerPage />} /> */}
+          {/* <Route path="/debug" element={<CodeDebuggerPage />} /> */}
           <Route path="/conversations" element={<ConversationsPage />} />
           <Route path="/brain" element={<BrainPage />} />
           <Route path="/goals" element={<GoalsPage />} />

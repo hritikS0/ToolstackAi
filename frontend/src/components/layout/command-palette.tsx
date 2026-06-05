@@ -7,8 +7,8 @@ const commands = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   { icon: MessageSquare, label: 'AI Chat', path: '/chat' },
   { icon: FileText, label: 'PDF Chat', path: '/pdf' },
-  { icon: Image, label: 'Image Analysis', path: '/image' },
-  { icon: Bug, label: 'Code Debugger', path: '/debug' },
+  // { icon: Image, label: 'Image Analysis', path: '/image' },
+  // { icon: Bug, label: 'Code Debugger', path: '/debug' },
   { icon: History, label: 'History', path: '/conversations' },
 ]
 
@@ -69,9 +69,8 @@ export function CommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: 
                     key={cmd.path}
                     onClick={() => { navigate(cmd.path); onClose() }}
                     onMouseEnter={() => setSelected(i)}
-                    className={`flex items-center gap-2.5 w-full px-2.5 py-2 rounded-[4px] text-xs transition-colors ${
-                      i === selected ? 'bg-accent-muted text-accent' : 'text-base-300 hover:bg-base-800'
-                    }`}
+                    className={`flex items-center gap-2.5 w-full px-2.5 py-2 rounded-[4px] text-xs transition-colors ${i === selected ? 'bg-accent-muted text-accent' : 'text-base-300 hover:bg-base-800'
+                      }`}
                   >
                     <cmd.icon className="size-3.5" />
                     {cmd.label}

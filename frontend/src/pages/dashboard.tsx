@@ -15,8 +15,8 @@ import type { DashboardData, BriefingData, Habit } from '@/types/api'
 const quickActions = [
   { icon: MessageSquare, label: 'New Chat', path: '/chat', key: 'k1' },
   { icon: FileText, label: 'Upload PDF', path: '/pdf', key: 'k2' },
-  { icon: Image, label: 'Image Analysis', path: '/image', key: 'k3' },
-  { icon: Bug, label: 'Code Debugger', path: '/debug', key: 'k4' },
+  // { icon: Image, label: 'Image Analysis', path: '/image', key: 'k3' },
+  // { icon: Bug, label: 'Code Debugger', path: '/debug', key: 'k4' },
 ]
 
 function StatCard({ label, value, icon: Icon, color }: { label: string; value: number; icon: typeof MessageSquare; color: string }) {
@@ -402,11 +402,11 @@ export function DashboardPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <StatCard label="Conversations" value={d.stats.conversations} icon={MessageSquare} color="text-accent" />
               <StatCard label="PDFs" value={d.stats.pdfs} icon={FileText} color="text-emerald-400" />
-              <StatCard label="Images" value={d.stats.images} icon={Image} color="text-cyan-400" />
-              <StatCard label="Debug" value={d.stats.debugSessions} icon={Bug} color="text-amber-400" />
+              {/* <StatCard label="Images" value={d.stats.images} icon={Image} color="text-cyan-400" /> */}
+              {/* <StatCard label="Debug" value={d.stats.debugSessions} icon={Bug} color="text-amber-400" /> */}
               <StatCard label="Memories" value={d.stats.memories} icon={Brain} color="text-violet-400" />
               <StatCard label="Projects" value={d.projects.length} icon={BookOpen} color="text-blue-400" />
             </div>
