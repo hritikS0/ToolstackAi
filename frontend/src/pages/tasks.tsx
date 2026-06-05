@@ -135,6 +135,7 @@ export function TasksPage() {
   const queryClient = useQueryClient()
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [priorityFilter, setPriorityFilter] = useState<string>('')
+  const [priorityDropdownOpen, setPriorityDropdownOpen] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
@@ -299,16 +300,45 @@ export function TasksPage() {
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-            <select
-              value={priorityFilter}
-              onChange={e => setPriorityFilter(e.target.value)}
-              className="h-6 rounded-[2px] border border-base-800 bg-base-950 px-1.5 text-[10px] font-mono text-base-400 outline-none"
-            >
-              <option value="">All Priorities</option>
-              {priorities.map(p => (
-                <option key={p.value} value={p.value}>{p.label}</option>
-              ))}
-            </select>
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setPriorityDropdownOpen(!priorityDropdownOpen)}
+                className="flex items-center gap-1 h-6 rounded-[2px] border border-base-800 bg-base-950 px-2 text-[10px] font-mono text-base-400 outline-none hover:text-base-250 transition-colors"
+              >
+                <span>{priorities.find(p => p.value === priorityFilter)?.label || 'All Priorities'}</span>
+                <ChevronDown className="size-3 text-base-500" />
+              </button>
+
+              {priorityDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setPriorityDropdownOpen(false)} />
+                  <div className="absolute right-0 mt-1 w-32 rounded-[4px] border border-base-800 bg-base-950 p-1 shadow-xl z-20">
+                    <button
+                      type="button"
+                      onClick={() => { setPriorityFilter(''); setPriorityDropdownOpen(false) }}
+                      className={`w-full text-left px-2 py-1.5 rounded-[2px] text-[10px] font-mono transition-colors ${
+                        !priorityFilter ? 'bg-accent-muted text-accent' : 'text-base-400 hover:text-base-200 hover:bg-base-900'
+                      }`}
+                    >
+                      All Priorities
+                    </button>
+                    {priorities.map(p => (
+                      <button
+                        key={p.value}
+                        type="button"
+                        onClick={() => { setPriorityFilter(p.value); setPriorityDropdownOpen(false) }}
+                        className={`w-full text-left px-2 py-1.5 rounded-[2px] text-[10px] font-mono transition-colors ${
+                          priorityFilter === p.value ? 'bg-accent-muted text-accent' : 'text-base-400 hover:text-base-200 hover:bg-base-900'
+                        }`}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
