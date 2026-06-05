@@ -23,11 +23,27 @@ export async function getDashboard(userId: string) {
   const chatCount = await prisma.conversation.count({ where: { userId, type: "chat" } });
   const pdfCount = await prisma.conversation.count({ where: { userId, type: "pdf" } });
 
-  const projectMemories = await prisma.memory.findMany({
-    where: { userId, category: "Projects" },
-    orderBy: { importance: "desc" },
+  const dbProjects = await prisma.project.findMany({
+    where: { userId },
+    orderBy: { updatedAt: "desc" },
     take: 3,
   });
+
+  const projectIds = dbProjects.map((p) => p.id);
+  const projectMemories = await prisma.memory.findMany({
+    where: { id: { in: projectIds } },
+    select: { id: true, importance: true },
+  });
+
+  const importanceMap = new Map(projectMemories.map((m) => [m.id, m.importance]));
+
+  const projectsWithImportance = dbProjects.map((p) => ({
+    id: p.id,
+    title: p.name,
+    content: p.description,
+    importance: importanceMap.get(p.id) ?? 4,
+    updatedAt: p.updatedAt,
+  }));
 
   return {
     stats: {
@@ -57,12 +73,6 @@ export async function getDashboard(userId: string) {
       goals: goalsMemories.map((m) => ({ title: m.title, content: m.content, importance: m.importance })),
       preferences: preferenceMemories.map((m) => ({ title: m.title, content: m.content })),
     },
-    projects: projectMemories.map((m) => ({
-      id: m.id,
-      title: m.title,
-      content: m.content,
-      importance: m.importance,
-      updatedAt: m.updatedAt,
-    })),
+    projects: projectsWithImportance,
   };
 }

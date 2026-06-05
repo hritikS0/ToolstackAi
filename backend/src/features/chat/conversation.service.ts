@@ -16,6 +16,7 @@ export async function conversationService(title: string, userId: string) {
       id: conversation.id,
       title: conversation.title,
       userId: conversation.userId,
+      settings: conversation.settings,
     },
   };
 }
@@ -38,11 +39,11 @@ export async function deleteConversation(conversationId: string, userId: string)
   await prisma.message.deleteMany({ where: { conversationId } });
   await prisma.conversation.delete({ where: { id: conversationId } });
 
-  deleteMediaByConversation(conversationId).catch(() => {});
-  deletePdfFromStorage(conversationId).catch(() => {});
+  deleteMediaByConversation(conversationId).catch(() => { });
+  deletePdfFromStorage(conversationId).catch(() => { });
 }
 
-export async function updateConversation(conversationId: string, userId: string, data: { title?: string }) {
+export async function updateConversation(conversationId: string, userId: string, data: { title?: string; settings?: any }) {
   const prisma = getPrismaClient();
   const conv = await prisma.conversation.findUnique({ where: { id: conversationId } });
   if (!conv || conv.userId !== userId) {
@@ -50,6 +51,8 @@ export async function updateConversation(conversationId: string, userId: string,
   }
   return prisma.conversation.update({
     where: { id: conversationId },
-    data: { title: data.title },
+    data: {
+      title: data.title, settings: data.settings !== undefined ? data.settings : undefined
+    },
   });
 }

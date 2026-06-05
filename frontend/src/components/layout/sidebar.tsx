@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import {
   MessageSquare, FileText, Image, Bug, History, Settings,
   PanelLeftClose, PanelLeft, Palette, BrainCircuit, Images,
-  ChevronDown, ChevronRight, Plus, Trophy, CheckSquare, Flame, StickyNote,
+  ChevronDown, ChevronRight, Plus, Trophy, CheckSquare, Flame, StickyNote, FolderOpen
 } from 'lucide-react'
 import { chatService } from '@/services/chat.service'
 import type { Conversation } from '@/types/api'
@@ -13,6 +13,7 @@ import type { Conversation } from '@/types/api'
 const navItems = [
   { icon: CheckSquare, label: 'Tasks', path: '/tasks' },
   { icon: Flame, label: 'Habits', path: '/habits' },
+  { icon: FolderOpen, label: 'Projects', path: '/projects' },
   { icon: StickyNote, label: 'Notes', path: '/notes' },
   { icon: Trophy, label: 'Goals', path: '/goals' },
   { icon: Image, label: 'Image Analysis', path: '/image' },

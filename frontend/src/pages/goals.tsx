@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { goalsService } from '@/services/goals.service'
+import { projectsService } from '@/services/projects.service'
 import { dashboardService } from '@/services/dashboard.service'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -92,13 +93,10 @@ export function GoalsPage() {
     },
   })
 
-  const { data: dashboardData } = useQuery({
-    queryKey: ['dashboard'],
-    queryFn: async () => (await dashboardService.get()).data,
-    staleTime: 30000,
+  const { data: projects = [] } = useQuery({
+    queryKey: ['projects'],
+    queryFn: async () => (await projectsService.list()).data || [],
   })
-
-  const projects = dashboardData?.projects || []
 
   const invalidateGoals = () => {
     queryClient.invalidateQueries({ queryKey: ['goals'] })
@@ -305,7 +303,7 @@ export function GoalsPage() {
                   </span>
                 )}
                 {selectedGoal.projectId && (
-                  <span>{projects.find(p => p.id === selectedGoal.projectId)?.title || 'Project'}</span>
+                  <span>{projects.find(p => p.id === selectedGoal.projectId)?.name || 'Project'}</span>
                 )}
               </div>
 
@@ -529,7 +527,7 @@ export function GoalsPage() {
                   >
                     <option value="">None</option>
                     {projects.map(p => (
-                      <option key={p.id} value={p.id}>{p.title}</option>
+                      <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
                   </select>
                 </div>

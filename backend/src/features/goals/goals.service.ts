@@ -123,6 +123,12 @@ export async function updateGoal(
 export async function deleteGoal(userId: string, goalId: string) {
   await verifyGoalOwnership(goalId, userId);
   const prisma = getPrismaClient();
+  const goal = await prisma.goal.findUnique({ where: { id: goalId } });
+  if (goal) {
+    await prisma.memory.deleteMany({
+      where: { userId, title: goal.title, category: "Goals" },
+    }).catch(() => {});
+  }
   await prisma.goal.delete({ where: { id: goalId } });
 }
 

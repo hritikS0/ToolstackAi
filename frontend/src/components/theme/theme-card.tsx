@@ -31,7 +31,12 @@ export function ThemeCard({ theme, active, onSelect }: ThemeCardProps) {
           </span>
         )}
       </div>
-      <div className="text-[11px] font-medium font-mono" style={{ color: theme.colors.text }}>{theme.name}</div>
+      <div className={cn(
+        'text-[11px] font-medium font-mono transition-colors',
+        active ? 'text-accent' : 'text-base-300',
+      )}>
+        {theme.name}
+      </div>
     </button>
   )
 }

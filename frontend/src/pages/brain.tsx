@@ -1,12 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { brainService } from '@/services/brain.service'
+import { goalsService } from '@/services/goals.service'
+import { projectsService } from '@/services/projects.service'
 import { MemoryCard } from '@/components/brain/memory-card'
 import { MemoryDetailPanel } from '@/components/brain/memory-detail-panel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog } from '@/components/ui/dialog'
-import type { Memory } from '@/types/api'
+import type { Memory, Goal, Project } from '@/types/api'
 import {
   Brain, Search, Plus, Pin, PinOff, Loader2, AlertTriangle,
   Sparkles, Target, BookOpen, Trophy, Wrench, Heart, Settings,
@@ -38,8 +41,15 @@ const categoryIcons: Record<string, typeof Sparkles> = {
   Personal: Heart,
 }
 
+const statusColors: Record<string, string> = {
+  active: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
+  completed: 'bg-blue-500/10 border-blue-500/30 text-blue-400',
+  archived: 'bg-base-600/10 border-base-600/30 text-base-500',
+}
+
 export function BrainPage() {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [activeSection, setActiveSection] = useState<Section>('dashboard')
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
@@ -58,6 +68,16 @@ export function BrainPage() {
   const { data: dashboard, isLoading: dashLoading } = useQuery({
     queryKey: ['brain-dashboard'],
     queryFn: async () => (await brainService.getDashboard()).data,
+  })
+
+  const { data: goals = [] } = useQuery({
+    queryKey: ['goals'],
+    queryFn: async () => (await goalsService.list()).data || [],
+  })
+
+  const { data: projects = [] } = useQuery({
+    queryKey: ['projects'],
+    queryFn: async () => (await projectsService.list()).data || [],
   })
 
   const { data: memories = [], isLoading: memLoading } = useQuery({
@@ -81,6 +101,8 @@ export function BrainPage() {
     queryClient.invalidateQueries({ queryKey: ['brain-memories'] })
     queryClient.invalidateQueries({ queryKey: ['brain-dashboard'] })
     queryClient.invalidateQueries({ queryKey: ['brain-settings'] })
+    queryClient.invalidateQueries({ queryKey: ['goals'] })
+    queryClient.invalidateQueries({ queryKey: ['projects'] })
   }, [queryClient])
 
   const createMutation = useMutation({
@@ -191,7 +213,7 @@ export function BrainPage() {
           { label: 'Memories', value: dashboard?.totalMemories || 0, icon: Brain, color: 'text-accent' },
           { label: 'Pinned', value: dashboard?.pinnedMemories || 0, icon: Pin, color: 'text-accent' },
           { label: 'Projects', value: (dashboard?.categories?.Projects || 0), icon: BookOpen, color: 'text-emerald-400' },
-          { label: 'Goals', value: (dashboard?.categories?.Goals || 0), icon: Trophy, color: 'text-amber-400' },
+          { label: 'Goals', value: goals.length, icon: Trophy, color: 'text-amber-400' },
           { label: 'Skills', value: (dashboard?.categories?.Skills || 0), icon: Wrench, color: 'text-cyan-400' },
         ].map(s => (
           <div key={s.label} className="rounded-[4px] border border-base-800 bg-surface p-3">
@@ -323,37 +345,47 @@ export function BrainPage() {
   )
 
   const renderProjects = () => {
-    const projectMemories = memories.filter(m => m.category === 'Projects')
     return (
       <div className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BookOpen className="size-4 text-base-500" />
             <h1 className="text-sm font-medium text-base-100 font-mono">Projects</h1>
+            <span className="text-[10px] text-base-600 font-mono">({projects.length})</span>
           </div>
-          <Button variant="primary" size="sm" onClick={() => { setNewCategory('Projects'); setShowAddMemory(true) }}>
-            <Plus className="size-3.5" /> Add Project
+          <Button variant="primary" size="sm" onClick={() => navigate('/projects')}>
+            <Plus className="size-3.5" /> Manage Projects
           </Button>
         </div>
-        {projectMemories.length === 0 ? (
+        {projects.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12">
             <BookOpen className="size-8 text-base-700 mb-2" />
             <p className="text-[11px] text-base-600 font-mono">No projects saved</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-2">
-            {projectMemories.map(m => (
-              <div key={m.id} className="rounded-[4px] border border-base-800 bg-surface p-3">
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-[12px] font-medium text-base-100 font-mono">{m.title}</h3>
-                  <button type="button" onClick={() => handleTogglePin(m)} className="text-base-500 hover:text-accent">
-                    {m.pinned ? <PinOff className="size-3" /> : <Pin className="size-3" />}
-                  </button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {projects.map((p: Project) => (
+              <div
+                key={p.id}
+                onClick={() => navigate('/projects')}
+                className="relative overflow-hidden rounded-[4px] border border-base-800 bg-surface hover:border-base-700 transition-colors p-3.5 cursor-pointer flex flex-col justify-between h-[100px]"
+                style={{ borderLeft: `3px solid ${p.color || '#3b82f6'}` }}
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[12px] font-medium text-base-100 font-mono truncate">{p.name}</span>
+                  </div>
+                  <p className="text-[11px] text-base-500 font-mono line-clamp-2 leading-relaxed">
+                    {p.description || 'No description.'}
+                  </p>
                 </div>
-                <p className="text-[11px] text-base-500 font-mono leading-relaxed">{m.content}</p>
-                <div className="flex items-center gap-2 mt-2 text-[9px] text-base-600 font-mono">
-                  <span>{new Date(m.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
-                  <span className="flex items-center gap-1"><Star className="size-3" />{m.importance}/5</span>
+                <div className="flex items-center justify-between text-[10px] text-base-600 font-mono pt-1">
+                  <div className="flex items-center gap-2">
+                    <span>Tasks: {p._count?.tasks || 0}</span>
+                    <span>•</span>
+                    <span>Goals: {p._count?.goals || 0}</span>
+                  </div>
+                  <span>{new Date(p.createdAt).toLocaleDateString()}</span>
                 </div>
               </div>
             ))}
@@ -364,42 +396,62 @@ export function BrainPage() {
   }
 
   const renderGoals = () => {
-    const goalMemories = memories.filter(m => m.category === 'Goals')
     return (
       <div className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Trophy className="size-4 text-base-500" />
             <h1 className="text-sm font-medium text-base-100 font-mono">Goals</h1>
+            <span className="text-[10px] text-base-600 font-mono">({goals.length})</span>
           </div>
-          <Button variant="primary" size="sm" onClick={() => { setNewCategory('Goals'); setShowAddMemory(true) }}>
-            <Plus className="size-3.5" /> Add Goal
+          <Button variant="primary" size="sm" onClick={() => navigate('/goals')}>
+            <Plus className="size-3.5" /> Manage Goals
           </Button>
         </div>
-        {goalMemories.length === 0 ? (
+        {goals.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12">
             <Trophy className="size-8 text-base-700 mb-2" />
             <p className="text-[11px] text-base-600 font-mono">No goals saved</p>
           </div>
         ) : (
-          <div className="space-y-1">
-            {goalMemories.map(m => (
-              <div key={m.id} className="flex items-start gap-3 rounded-[4px] border border-base-800 bg-surface p-2.5">
-                <div className="size-2 rounded-full bg-accent mt-1 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[12px] font-medium text-base-100 font-mono">{m.title}</span>
-                    <div className="flex items-center gap-1">
-                      <span className="text-[9px] text-base-600 font-mono">Imp {m.importance}/5</span>
-                      <button type="button" onClick={() => handleTogglePin(m)} className="text-base-500 hover:text-accent">
-                        {m.pinned ? <PinOff className="size-3" /> : <Pin className="size-3" />}
-                      </button>
+          <div className="space-y-1.5">
+            {goals.map(g => {
+              const milestones = g.milestones || []
+              const completedMs = milestones.filter(m => m.status === 'completed').length
+              return (
+                <div key={g.id} className="flex items-start gap-3 rounded-[4px] border border-base-800 bg-surface p-3 hover:border-base-700 transition-colors">
+                  <Trophy className="size-4 text-amber-400 mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[12px] font-medium text-base-100 font-mono truncate">{g.title}</span>
+                      <span className={`shrink-0 inline-flex items-center px-1.5 py-0.5 rounded-[2px] text-[9px] font-mono border ${statusColors[g.status] || statusColors.active}`}>
+                        {g.status}
+                      </span>
+                    </div>
+                    {g.description && <p className="text-[11px] text-base-500 font-mono mt-1 leading-relaxed">{g.description}</p>}
+                    
+                    <div className="mt-2.5 space-y-1.5">
+                      <div className="bg-base-800 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className="bg-accent h-full rounded-full transition-all duration-300"
+                          style={{ width: `${Math.min(g.progress, 100)}%` }}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-base-500 font-mono">
+                        <span>
+                          {milestones.length > 0 ? `${completedMs}/${milestones.length} milestones` : `${g.progress}%`}
+                        </span>
+                        {g.targetDate && (
+                          <span>
+                            Target: {new Date(g.targetDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  {m.content && <p className="text-[11px] text-base-500 font-mono mt-0.5">{m.content}</p>}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

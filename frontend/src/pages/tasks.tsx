@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { tasksService } from '@/services/tasks.service'
+import { projectsService } from '@/services/projects.service'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog } from '@/components/ui/dialog'
@@ -152,6 +153,11 @@ export function TasksPage() {
     },
   })
 
+  const { data: projects = [] } = useQuery({
+    queryKey: ['projects'],
+    queryFn: async () => (await projectsService.list()).data || [],
+  })
+
   const createMutation = useMutation({
     mutationFn: (data: Partial<Task>) => tasksService.create(data),
     onSuccess: () => {
@@ -203,6 +209,7 @@ export function TasksPage() {
       status: form.status,
       dueDate: form.dueDate || undefined,
       tags,
+      projectId: form.projectId || undefined,
     })
   }
 
@@ -217,6 +224,7 @@ export function TasksPage() {
         status: selectedTask.status,
         dueDate: selectedTask.dueDate || undefined,
         tags: selectedTask.tags,
+        projectId: selectedTask.projectId || null,
       },
     })
   }
@@ -405,13 +413,17 @@ export function TasksPage() {
                   />
                 </div>
                 <div>
-                  <span className="text-[10px] text-base-500 font-mono block mb-1">Project ID (optional)</span>
-                  <Input
+                  <span className="text-[10px] text-base-500 font-mono block mb-1">Project (optional)</span>
+                  <select
                     value={form.projectId}
                     onChange={e => setForm({ ...form, projectId: e.target.value })}
-                    placeholder="Enter project ID"
-                    className="h-7 text-[11px] font-mono"
-                  />
+                    className="w-full h-7 rounded-[2px] border border-base-800 bg-base-950 px-2 text-[11px] font-mono text-base-200 outline-none"
+                  >
+                    <option value="">None</option>
+                    {projects.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div className="flex items-center justify-end gap-2 px-3 pb-3">
@@ -504,6 +516,19 @@ export function TasksPage() {
                         className="h-7 text-[11px] font-mono"
                       />
                     </div>
+                    <div>
+                      <span className="text-[10px] text-base-500 font-mono block mb-1">Project (optional)</span>
+                      <select
+                        value={selectedTask.projectId || ''}
+                        onChange={e => setSelectedTask({ ...selectedTask, projectId: e.target.value || null })}
+                        className="w-full h-7 rounded-[2px] border border-base-800 bg-base-950 px-2 text-[11px] font-mono text-base-200 outline-none"
+                      >
+                        <option value="">None</option>
+                        {projects.map(p => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                    </div>
                     <div className="flex items-center gap-2 pt-1">
                       <Button variant="ghost" size="sm" onClick={() => setEditMode(false)}>Cancel</Button>
                       <Button
@@ -531,6 +556,9 @@ export function TasksPage() {
                         </span>
                         {selectedTask.dueDate && (
                           <span className="text-[9px] font-mono text-base-500">{formatDueDateFull(selectedTask.dueDate)}</span>
+                        )}
+                        {selectedTask.projectId && (
+                          <span className="text-[9px] font-mono text-base-500">• {projects.find(p => p.id === selectedTask.projectId)?.name || 'Project'}</span>
                         )}
                       </div>
                     </div>

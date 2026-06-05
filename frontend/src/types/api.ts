@@ -27,6 +27,7 @@ export interface Conversation {
   title: string | null
   type?: string
   userId: string
+  settings?: any
   createdAt: string
 }
 
@@ -267,4 +268,23 @@ export interface Task {
   tags: string[]
   createdAt: string
   updatedAt: string
+}
+
+export interface Project {
+  id: string
+  userId: string
+  name: string
+  description: string
+  color: string
+  icon: string
+  createdAt: string
+  updatedAt: string
+  tasks?: Task[]
+  goals?: Goal[]
+  habits?: Habit[]
+  _count?: {
+    tasks: number
+    goals: number
+    habits: number
+  }
 }

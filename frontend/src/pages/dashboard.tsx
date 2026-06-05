@@ -21,10 +21,10 @@ const quickActions = [
 
 function StatCard({ label, value, icon: Icon, color }: { label: string; value: number; icon: typeof MessageSquare; color: string }) {
   return (
-    <div className="rounded-[4px] border border-base-800 bg-surface px-3 py-2.5 hover:border-base-700 transition-colors cursor-default">
-      <div className="flex items-center gap-2 mb-1.5">
-        <Icon className={`size-3.5 ${color}`} />
-        <span className="text-[13px] text-base-500 font-mono uppercase tracking-wider">{label}</span>
+    <div className="rounded-[4px] border border-base-800 bg-surface px-3 py-2.5 hover:border-base-700 transition-colors cursor-default min-w-0">
+      <div className="flex items-center gap-2 mb-1.5 min-w-0">
+        <Icon className={`size-3.5 ${color} shrink-0`} />
+        <span className="text-[13px] text-base-500 font-mono uppercase tracking-wider truncate">{label}</span>
       </div>
       <span className="text-xl font-semibold text-base-100 font-mono tabular-nums">{value}</span>
     </div>
@@ -159,7 +159,7 @@ export function DashboardPage() {
     return (
       <div className="h-full overflow-y-auto">
         <div className="p-4 space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <h1 className="text-2xl font-semibold text-base-100 font-mono">
                 {b.greeting}, {b.firstName}.
@@ -168,7 +168,7 @@ export function DashboardPage() {
                 {new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(new Date(b.date))}
               </p>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               {quickActions.map((a) => (
                 <button type="button"
                   key={a.label}
@@ -182,7 +182,7 @@ export function DashboardPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <StatCard label="Tasks" value={b.stats.tasks} icon={CheckSquare} color="text-accent" />
             <StatCard label="Habits" value={b.stats.habits} icon={Flame} color="text-orange-400" />
             <StatCard label="Projects" value={b.stats.projects} icon={FolderOpen} color="text-blue-400" />
@@ -381,14 +381,14 @@ export function DashboardPage() {
       <div className="h-full overflow-y-auto">
         <div className="h-full flex flex-col">
           <div className="p-4 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <h1 className="text-sm font-medium text-base-100 font-mono">Dashboard</h1>
                 <p className="text-[14px] text-base-500 mt-0.5 font-mono">
                   ~/welcome back, {firstName}
                 </p>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
                 {quickActions.slice(0, 4).map((a) => (
                   <button type="button"
                     key={a.label}
@@ -402,7 +402,7 @@ export function DashboardPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
               <StatCard label="Conversations" value={d.stats.conversations} icon={MessageSquare} color="text-accent" />
               <StatCard label="PDFs" value={d.stats.pdfs} icon={FileText} color="text-emerald-400" />
               <StatCard label="Images" value={d.stats.images} icon={Image} color="text-cyan-400" />

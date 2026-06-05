@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
 import remarkGfm from 'remark-gfm'
 import { cn } from '@/lib/utils'
-import { Copy, Check, RefreshCw, Pencil, Sparkles } from 'lucide-react'
+import { Copy, Check, RefreshCw, Pencil, Sparkles, Globe } from 'lucide-react'
 
 interface MessageBlockProps {
   role: 'user' | 'assistant'
@@ -18,6 +18,7 @@ interface MessageBlockProps {
   onCopy?: () => void
   onEdit?: () => void
   imageUrl?: string
+  sources?: { title: string; url: string; description?: string }[]
 }
 
 function TerminalCursor() {
@@ -26,7 +27,7 @@ function TerminalCursor() {
 
 function AssistantMessage({
   content, timestamp, modelName, tokenSpeed, isStreaming, isThinking, thinkingMessage,
-  onRetry, onCopy, onEdit,
+  onRetry, onCopy, onEdit, sources,
 }: MessageBlockProps) {
   const [copied, setCopied] = useState(false)
   const safeContent = String(content)
@@ -89,6 +90,46 @@ function AssistantMessage({
             <span className="text-base-600 font-mono italic">Ready</span>
           )}
         </span>
+
+        {!showThinking && sources && sources.length > 0 && (
+          <div className="mt-4 pt-3.5 border-t border-base-800 animate-fade-in">
+            <div className="flex items-center gap-1.5 mb-2.5 text-[11px] font-mono text-accent font-semibold">
+              <Globe className="size-3.5 animate-pulse text-accent/80" />
+              <span>SOURCES FOUND:</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {sources.map((src, index) => {
+                let domain = ''
+                try {
+                  domain = new URL(src.url).hostname
+                } catch {
+                  domain = src.url
+                }
+                return (
+                  <a
+                    key={index}
+                    href={src.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex flex-col p-2.5 rounded-[4px] border border-base-800 bg-base-950/40 hover:border-accent/40 hover:bg-base-900/40 transition-all duration-200 group/source"
+                  >
+                    <span className="text-[12px] font-semibold text-base-300 group-hover/source:text-accent font-mono truncate">
+                      {src.title || domain}
+                    </span>
+                    <span className="text-[10px] text-base-600 font-mono truncate mt-0.5">
+                      {domain}
+                    </span>
+                    {src.description && (
+                      <p className="text-[10px] text-base-500 font-mono line-clamp-2 mt-1 leading-normal">
+                        {src.description}
+                      </p>
+                    )}
+                  </a>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-1 px-3 py-1.5 border-t border-base-800 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -145,7 +186,8 @@ function arePropsEqual(prev: MessageBlockProps, next: MessageBlockProps) {
     prev.isStreaming === next.isStreaming &&
     prev.isThinking === next.isThinking &&
     prev.thinkingMessage === next.thinkingMessage &&
-    prev.imageUrl === next.imageUrl
+    prev.imageUrl === next.imageUrl &&
+    JSON.stringify(prev.sources) === JSON.stringify(next.sources)
   )
 }
 

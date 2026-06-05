@@ -19,6 +19,7 @@ const MediaPage = lazy(() => import('@/pages/media').then(m => ({ default: m.Med
 const TasksPage = lazy(() => import('@/pages/tasks').then(m => ({ default: m.TasksPage })))
 const HabitsPage = lazy(() => import('@/pages/habits').then(m => ({ default: m.HabitsPage })))
 const NotesPage = lazy(() => import('@/pages/notes').then(m => ({ default: m.NotesPage })))
+const ProjectsPage = lazy(() => import('@/pages/projects').then(m => ({ default: m.ProjectsPage })))
 
 export function AppRoutes() {
   return (
@@ -44,6 +45,7 @@ export function AppRoutes() {
           <Route path="/conversations" element={<ConversationsPage />} />
           <Route path="/brain" element={<BrainPage />} />
           <Route path="/goals" element={<GoalsPage />} />
+          <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/media" element={<MediaPage />} />
           <Route path="/tasks" element={<TasksPage />} />
           <Route path="/habits" element={<HabitsPage />} />

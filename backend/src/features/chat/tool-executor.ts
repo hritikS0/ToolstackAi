@@ -1,6 +1,8 @@
 import { getPrismaClient } from "../../shared/db/prismaClient.js";
 import { aiCreateTask } from "../tasks/tasks.service.js";
 import { aiCreateHabit } from "../habits/habits.service.js";
+import { createProject } from "../projects/projects.service.js";
+import { createMemory } from "../brain/brain.service.js";
 
 interface ToolResult {
   success: boolean
@@ -74,6 +76,27 @@ export async function executeToolCall(name: string, params: Record<string, unkno
         data: { goalId: goal.id, title, description, status: 'pending', order: 1 },
       }).catch(() => {});
       return { success: true, message: `✓ Created goal "${title}"` };
+    }
+
+    case "create_project": {
+      const name = typeof params.name === 'string' ? params.name : 'Untitled Project';
+      const description = typeof params.description === 'string' ? params.description : undefined;
+      const color = typeof params.color === 'string' ? params.color : undefined;
+      const icon = typeof params.icon === 'string' ? params.icon : undefined;
+      const result = await createProject(userId, { name, description, color, icon }).catch(() => null);
+      if (!result) return { success: false, message: "Failed to create project." };
+      return { success: true, message: `✓ Created project "${result.name}"` };
+    }
+
+    case "save_memory": {
+      const title = typeof params.title === 'string' ? params.title : 'Untitled Memory';
+      const content = typeof params.content === 'string' ? params.content : '';
+      const category = typeof params.category === 'string' ? params.category : 'Personal';
+      const importance = typeof params.importance === 'number' ? params.importance : 3;
+      const confidence = typeof params.confidence === 'number' ? params.confidence : 1.0;
+      const result = await createMemory(userId, { title, content, category, importance, confidence, source: "ai-chat" }).catch(() => null);
+      if (!result) return { success: false, message: "Failed to save memory." };
+      return { success: true, message: `✓ Saved memory "${result.title}" under ${result.category}` };
     }
 
     default:

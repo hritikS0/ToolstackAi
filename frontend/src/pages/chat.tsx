@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { chatService } from '@/services/chat.service'
 import { Button } from '@/components/ui/button'
 import { Composer } from '@/components/chat/composer'
 import { MessageBlock } from '@/components/chat/message-block'
-import { formatRelativeTime } from '@/lib/utils'
-import { MessageSquare, Plus, Loader2, AlertTriangle, BrainCircuit, Bug, Code, Lightbulb, Sparkles } from 'lucide-react'
+import { formatRelativeTime, cn } from '@/lib/utils'
+import { MessageSquare, Plus, Loader2, AlertTriangle, BrainCircuit, Bug, Code, Lightbulb, Sparkles, Globe } from 'lucide-react'
 import type { Message, Conversation } from '@/types/api'
 import { motion } from 'framer-motion'
 
@@ -77,6 +77,17 @@ export function ChatPage() {
   })
   const thinkingMsgInterval = useRef<ReturnType<typeof setInterval> | null>(null)
   const prevIdRef = useRef(id)
+
+  const [streamingSources, setStreamingSources] = useState<{ title: string; url: string; description?: string }[] | null>(null)
+
+  const toggleSearchMutation = useMutation({
+    mutationFn: async ({ id, settings }: { id: string; settings: any }) => {
+      return chatService.updateConversation(id, { settings })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] })
+    }
+  })
 
   const { data: conversations = [] } = useQuery({
     queryKey: ['conversations'],
@@ -157,6 +168,7 @@ export function ChatPage() {
     console.log('[chat] send start', { msg, convId })
     setInput('')
     setStreamingContent('')
+    setStreamingSources(null)
     setStreamError(null)
     setIsStreaming(true)
     contentRef.current = ''
@@ -211,7 +223,7 @@ export function ChatPage() {
     try {
       console.log('[chat] stream start')
       await chatService.streamChat(
-        { message: msg, conversationId: convId },
+        { message: msg, conversationId: convId, tools: { webSearch: webSearchEnabled } },
         (chunk: string) => {
           fullContent += chunk
           scheduleRender(fullContent)
@@ -222,6 +234,10 @@ export function ChatPage() {
           if (brainNotiTimer.current) clearTimeout(brainNotiTimer.current)
           brainNotiTimer.current = setTimeout(() => setBrainNoti(null), 4000)
         },
+        (sources: { title: string; url: string; description?: string }[]) => {
+          console.log('[chat] stream sources', sources)
+          setStreamingSources(sources)
+        }
       )
       console.log('[chat] stream end', { contentLength: fullContent.length })
     } catch (err) {
@@ -309,12 +325,14 @@ export function ChatPage() {
   }, [])
 
   const currentConv = conversations.find(c => c.id === id)
+  const currentSettings = currentConv?.settings || {}
+  const webSearchEnabled = !!currentSettings.webSearch
 
   return (
     <div className="flex h-full">
       <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFileChange} />
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
         {!id ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center px-4">
@@ -332,7 +350,38 @@ export function ChatPage() {
             </div>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto bg-workspace">
+          <div className="flex-1 flex flex-col min-w-0 min-h-0">
+            {/* Header */}
+            <div className="flex items-center justify-between h-12 px-4 border-b border-base-800 bg-surface/50 backdrop-blur-sm shrink-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <MessageSquare className="size-4 text-base-500 shrink-0" />
+                <span className="text-[13px] font-semibold text-base-200 font-mono truncate">
+                  {currentConv?.title || 'Untitled Chat'}
+                </span>
+              </div>
+              <button
+                type="button"
+                disabled={toggleSearchMutation.isPending}
+                onClick={() => {
+                  const currentSettings = currentConv?.settings || {}
+                  toggleSearchMutation.mutate({
+                    id: id!,
+                    settings: { ...currentSettings, webSearch: !currentSettings.webSearch },
+                  })
+                }}
+                className={cn(
+                  'flex items-center gap-1.5 h-7 px-2.5 rounded-[4px] border text-[11px] font-mono transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed',
+                  webSearchEnabled
+                    ? 'border-accent/40 bg-accent-muted text-accent font-semibold shadow-[0_0_8px_rgba(var(--accent-rgb),0.08)]'
+                    : 'border-base-750 bg-base-900/60 text-base-400 hover:text-base-200 hover:border-base-700'
+                )}
+              >
+                <Globe className={cn('size-3.5', webSearchEnabled && 'animate-pulse')} />
+                <span>WEB SEARCH: {webSearchEnabled ? 'ON' : 'OFF'}</span>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto bg-workspace">
             {isLoading && messages.length === 0 && !optimisticUserMsg && !isStreaming && !isThinking && !streamingContent ? (
               <div className="flex items-center justify-center h-full">
                 <Loader2 className="size-4 animate-spin text-base-500" />
@@ -418,6 +467,7 @@ export function ChatPage() {
                     isThinking={isThinking}
                     thinkingMessage={thinkingMessage}
                     timestamp={isStreaming && streamingContent ? undefined : ''}
+                    sources={streamingSources || undefined}
                   />
                 )}
 
@@ -433,6 +483,7 @@ export function ChatPage() {
                 <div ref={messagesEndRef} />
               </div>
             )}
+          </div>
           </div>
         )}
 

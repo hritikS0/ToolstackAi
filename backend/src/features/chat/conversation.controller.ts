@@ -58,8 +58,8 @@ export async function updateConversation(
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
     const id = req.params.id as string;
-    const { title } = req.body;
-    const updated = await updateConversationService(id, userId, { title });
+    const { title, settings } = req.body;
+    const updated = await updateConversationService(id, userId, { title, settings });
     res.status(200).json({ success: true, data: updated });
   } catch (error) {
     next(error);

@@ -20,7 +20,7 @@ export async function streamChatHandler(
     return;
   }
 
-  const { message, conversationId } = parsed.data;
+  const { message, conversationId, tools } = parsed.data;
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -29,10 +29,17 @@ export async function streamChatHandler(
   res.flushHeaders();
 
   try {
-    const stream = streamAiResponse(message, conversationId, userId);
+    const stream = streamAiResponse(message, conversationId, userId, tools);
 
     for await (const chunk of stream) {
       if (res.destroyed) break;
+
+      // capture and write source
+      if (chunk.startsWith("__sources__:")) {
+        const sources = JSON.parse(chunk.slice(12));
+        res.write(`data: ${JSON.stringify({ type: "sources", sources })}\n\n`)
+        continue;
+      }
       if (chunk.startsWith("__brain__:")) {
         const saved = parseInt(chunk.slice(10), 10);
         if (saved > 0) {

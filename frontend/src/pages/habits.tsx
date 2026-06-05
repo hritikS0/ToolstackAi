@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { habitsService } from '@/services/habits.service'
+import { projectsService } from '@/services/projects.service'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -349,6 +350,12 @@ function CreateHabitDialog({
   const [targetCount, setTargetCount] = useState('')
   const [projectId, setProjectId] = useState('')
 
+  const { data: projects = [] } = useQuery({
+    queryKey: ['projects'],
+    queryFn: async () => (await projectsService.list()).data || [],
+    enabled: open,
+  })
+
   const createMutation = useMutation({
     mutationFn: (data: { title: string; description?: string; frequency: 'daily' | 'weekly' | 'monthly'; targetCount?: string; projectId?: string }) =>
       habitsService.create(data),
@@ -436,13 +443,17 @@ function CreateHabitDialog({
           </div>
 
           <div>
-            <label className="text-[10px] font-medium text-base-400 mb-1 block font-mono uppercase tracking-wider">Project ID (optional)</label>
-            <Input
+            <label className="text-[10px] font-medium text-base-400 mb-1 block font-mono uppercase tracking-wider">Project (optional)</label>
+            <select
               value={projectId}
               onChange={e => setProjectId(e.target.value)}
-              placeholder="Link to a project..."
-              className="h-8 text-[12px]"
-            />
+              className="w-full h-8 rounded-[4px] border border-base-800 bg-surface px-2.5 text-[12px] text-base-100 font-mono focus:outline-none focus:border-accent/50"
+            >
+              <option value="">None</option>
+              {projects.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -949,7 +960,7 @@ export function HabitsPage() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="p-4 space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-2">
             <Terminal className="size-4 text-base-500" />
             <h1 className="text-sm font-medium text-base-100 font-mono">Habits</h1>
@@ -957,7 +968,7 @@ export function HabitsPage() {
               {activeHabits.length} active
             </span>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             <Button variant="ghost" size="sm" onClick={handleAiInsights} loading={insightsLoading}>
               {insightsLoading ? (
                 <Loader2 className="size-3.5 animate-spin" />
@@ -1019,11 +1030,11 @@ export function HabitsPage() {
         ) : (
           <div className="space-y-6">
             {/* Top Dashboard Section */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 animate-fade-in">
-              <div className="rounded-[4px] border border-base-800 bg-surface px-3 py-2.5 hover:border-base-750 transition-colors">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <Activity className="size-3.5 text-accent" />
-                  <span className="text-[11px] text-base-500 font-mono uppercase tracking-wider">Consistency Score</span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 animate-fade-in">
+              <div className="rounded-[4px] border border-base-800 bg-surface px-3 py-2.5 hover:border-base-750 transition-colors min-w-0">
+                <div className="flex items-center gap-2 mb-1.5 min-w-0">
+                  <Activity className="size-3.5 text-accent shrink-0" />
+                  <span className="text-[11px] text-base-500 font-mono uppercase tracking-wider truncate">Consistency Score</span>
                 </div>
                 <div className="flex items-baseline gap-1">
                   <span className="text-xl font-semibold text-base-100 font-mono tabular-nums">{selectedHabitStats.consistencyScore}</span>
@@ -1031,10 +1042,10 @@ export function HabitsPage() {
                 </div>
               </div>
               
-              <div className="rounded-[4px] border border-base-800 bg-surface px-3 py-2.5 hover:border-base-750 transition-colors">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <Flame className="size-3.5 text-orange-400" />
-                  <span className="text-[11px] text-base-500 font-mono uppercase tracking-wider">Current Streak</span>
+              <div className="rounded-[4px] border border-base-800 bg-surface px-3 py-2.5 hover:border-base-750 transition-colors min-w-0">
+                <div className="flex items-center gap-2 mb-1.5 min-w-0">
+                  <Flame className="size-3.5 text-orange-400 shrink-0" />
+                  <span className="text-[11px] text-base-500 font-mono uppercase tracking-wider truncate">Current Streak</span>
                 </div>
                 <div className="flex items-baseline gap-1">
                   <span className="text-xl font-semibold text-base-100 font-mono tabular-nums">{selectedHabitStats.currentStreak}</span>
@@ -1042,10 +1053,10 @@ export function HabitsPage() {
                 </div>
               </div>
 
-              <div className="rounded-[4px] border border-base-800 bg-surface px-3 py-2.5 hover:border-base-750 transition-colors">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <Trophy className="size-3.5 text-amber-500" />
-                  <span className="text-[11px] text-base-500 font-mono uppercase tracking-wider">Longest Streak</span>
+              <div className="rounded-[4px] border border-base-800 bg-surface px-3 py-2.5 hover:border-base-750 transition-colors min-w-0">
+                <div className="flex items-center gap-2 mb-1.5 min-w-0">
+                  <Trophy className="size-3.5 text-amber-500 shrink-0" />
+                  <span className="text-[11px] text-base-500 font-mono uppercase tracking-wider truncate">Longest Streak</span>
                 </div>
                 <div className="flex items-baseline gap-1">
                   <span className="text-xl font-semibold text-base-100 font-mono tabular-nums">{selectedHabitStats.longestStreak}</span>
@@ -1053,10 +1064,10 @@ export function HabitsPage() {
                 </div>
               </div>
 
-              <div className="rounded-[4px] border border-base-800 bg-surface px-3 py-2.5 hover:border-base-750 transition-colors">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <TrendingUp className="size-3.5 text-emerald-400" />
-                  <span className="text-[11px] text-base-500 font-mono uppercase tracking-wider">Completion Rate</span>
+              <div className="rounded-[4px] border border-base-800 bg-surface px-3 py-2.5 hover:border-base-750 transition-colors min-w-0">
+                <div className="flex items-center gap-2 mb-1.5 min-w-0">
+                  <TrendingUp className="size-3.5 text-emerald-400 shrink-0" />
+                  <span className="text-[11px] text-base-500 font-mono uppercase tracking-wider truncate">Completion Rate</span>
                 </div>
                 <div className="flex items-baseline gap-1">
                   <span className="text-xl font-semibold text-base-100 font-mono tabular-nums">{selectedHabitStats.completionRate}%</span>

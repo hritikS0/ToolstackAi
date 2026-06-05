@@ -19,7 +19,7 @@ export const chatService = {
   async deleteConversation(id: string) {
     await apiClient.delete(`/chat/conversations/${id}`)
   },
-  async updateConversation(id: string, data: { title?: string }) {
+  async updateConversation(id: string, data: { title?: string; settings?: any }) {
     const res = await apiClient.patch<{ success: boolean; data: Conversation }>(`/chat/conversations/${id}`, data)
     return res.data
   },
@@ -39,9 +39,10 @@ export const chatService = {
     return res.data
   },
   async streamChat(
-    data: { message: string; conversationId: string },
+    data: { message: string; conversationId: string; tools?: { webSearch: boolean } },
     onChunk: (chunk: string) => void,
     onMemory?: (saved: number) => void,
+    onSources?: (sources: { title: string; url: string; description?: string }[]) => void,
   ): Promise<void> {
     const token = localStorage.getItem(config.auth.tokenKey)
     const response = await fetch(`${config.api.baseUrl}/chat/stream`, {
@@ -71,6 +72,12 @@ export const chatService = {
           if (payload === '[DONE]') return
           try {
             const parsed = JSON.parse(payload)
+            if (parsed.type === 'sources') {
+              if (onSources && parsed.sources) {
+                onSources(parsed.sources)
+              }
+              continue
+            }
             if (parsed.type === 'brain') {
               if (onMemory && parsed.saved > 0) onMemory(parsed.saved)
               continue

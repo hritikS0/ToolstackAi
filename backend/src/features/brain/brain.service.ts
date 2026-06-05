@@ -48,8 +48,57 @@ export async function createMemory(
   },
 ) {
   const prisma = getPrismaClient();
-  return prisma.memory.create({
-    data: { ...data, userId },
+  return prisma.$transaction(async (tx) => {
+    const created = await tx.memory.create({
+      data: { ...data, userId },
+    });
+
+    if (data.category === "Goals") {
+      const existingGoal = await tx.goal.findFirst({
+        where: { userId, title: data.title },
+      });
+      if (!existingGoal) {
+        const goal = await tx.goal.create({
+          data: {
+            userId,
+            title: data.title,
+            description: data.content,
+            status: "active",
+            progress: 0,
+            sourceMemoryId: created.id,
+          },
+        });
+        await tx.milestone.create({
+          data: {
+            goalId: goal.id,
+            title: data.title,
+            description: data.content,
+            status: "pending",
+            order: 1,
+          },
+        });
+      }
+    }
+
+    if (data.category === "Projects") {
+      const existingProject = await tx.project.findFirst({
+        where: { userId, name: data.title },
+      });
+      if (!existingProject) {
+        await tx.project.create({
+          data: {
+            id: created.id,
+            userId,
+            name: data.title,
+            description: data.content,
+            color: "#f59e0b",
+            icon: "folder",
+          },
+        });
+      }
+    }
+
+    return created;
   });
 }
 
@@ -63,7 +112,25 @@ export async function updateMemory(
   if (!existing || existing.userId !== userId) {
     throw Object.assign(new Error("Memory not found"), { statusCode: 404 });
   }
-  return prisma.memory.update({ where: { id }, data });
+
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.memory.update({ where: { id }, data });
+
+    if (existing.category === "Projects") {
+      const projectUpdateData: Record<string, any> = {};
+      if (data.title !== undefined) projectUpdateData.name = data.title;
+      if (data.content !== undefined) projectUpdateData.description = data.content;
+
+      if (Object.keys(projectUpdateData).length > 0) {
+        await tx.project.update({
+          where: { id },
+          data: projectUpdateData,
+        });
+      }
+    }
+
+    return updated;
+  });
 }
 
 export async function deleteMemory(id: string, userId: string) {
@@ -72,7 +139,22 @@ export async function deleteMemory(id: string, userId: string) {
   if (!existing || existing.userId !== userId) {
     throw Object.assign(new Error("Memory not found"), { statusCode: 404 });
   }
-  await prisma.memory.delete({ where: { id } });
+
+  await prisma.$transaction(async (tx) => {
+    if (existing.category === "Goals") {
+      await tx.goal.deleteMany({
+        where: { userId, sourceMemoryId: id },
+      });
+    }
+
+    if (existing.category === "Projects") {
+      await tx.project.deleteMany({
+        where: { userId, id: id },
+      });
+    }
+
+    await tx.memory.delete({ where: { id } });
+  });
 }
 
 export async function getDashboard(userId: string) {
@@ -220,32 +302,7 @@ export async function autoExtractMemories(userMessage: string, userId: string): 
       });
       saved++;
 
-      if (mem.category === "Goals") {
-        const existingGoal = await prisma.goal.findFirst({
-          where: { userId, title: mem.title },
-        });
-        if (!existingGoal) {
-          const goal = await prisma.goal.create({
-            data: {
-              userId,
-              title: mem.title,
-              description: mem.content,
-              status: "active",
-              progress: 0,
-              sourceMemoryId: created.id,
-            },
-          });
-          await prisma.milestone.create({
-            data: {
-              goalId: goal.id,
-              title: mem.title,
-              description: mem.content,
-              status: "pending",
-              order: 1,
-            },
-          });
-        }
-      }
+
     }
   } catch (err) {
     logger.error({ err, userId }, "Memory extraction failed");

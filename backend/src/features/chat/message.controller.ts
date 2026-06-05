@@ -10,11 +10,11 @@ export async function createMessage(
   next: NextFunction,
 ) {
   try {
-    const { message, conversationId } = messageSchema.parse(req.body);
+    const { message, conversationId, tools } = messageSchema.parse(req.body);
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
 
-    const result = await generateAiResponse(message, conversationId, userId);
+    const result = await generateAiResponse(message, conversationId, userId, tools);
     res.status(200).json({ success: true, data: result });
   } catch (error) {
     next(error);
