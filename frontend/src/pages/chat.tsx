@@ -355,7 +355,7 @@ export function ChatPage() {
             <div className="flex items-center justify-between h-12 px-4 border-b border-base-800 bg-surface/50 backdrop-blur-sm shrink-0">
               <div className="flex items-center gap-2 min-w-0">
                 <MessageSquare className="size-4 text-base-500 shrink-0" />
-                <span className="text-[13px] font-semibold text-base-200 font-mono truncate">
+                <span className="hidden sm:inline text-[13px] font-semibold text-base-200 font-mono truncate">
                   {currentConv?.title || 'Untitled Chat'}
                 </span>
               </div>
