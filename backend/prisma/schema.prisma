@@ -8,28 +8,31 @@ datasource db {
 }
 
 model User {
-  id             String          @id @default(cuid())
-  email          String          @unique
-  password       String
-  fullName       String
-  createdAt      DateTime        @default(now())
-  brainSettings  BrainSettings?
-  media          ChatMedia[]
-  conversations  Conversation[]
-  memories       Memory[]
-  Project        Project[]
-  files          StoredFile[]
-  Thread         Thread[]
-  toolExecutions ToolExecution[]
-  usageRecords   UsageRecord[]
-  apiKeys        UserApiKey[]
-  tasks          Task[]
-  goals          Goal[]
-  habits         Habit[]
-  notes          Note[]
-  researchItems  ResearchItem[]
-  collections    Collection[]
-  automations    Automation[]
+  id                      String                   @id @default(cuid())
+  email                   String                   @unique
+  password                String
+  fullName                String
+  createdAt               DateTime                 @default(now())
+  brainSettings           BrainSettings?
+  notificationPreferences NotificationPreferences?
+  notifications           Notification[]
+  reminders                Reminder[]
+  media                   ChatMedia[]
+  conversations           Conversation[]
+  memories                Memory[]
+  Project                 Project[]
+  files                   StoredFile[]
+  Thread                  Thread[]
+  toolExecutions          ToolExecution[]
+  usageRecords            UsageRecord[]
+  apiKeys                 UserApiKey[]
+  tasks                   Task[]
+  goals                   Goal[]
+  habits                  Habit[]
+  notes                   Note[]
+  researchItems           ResearchItem[]
+  collections             Collection[]
+  automations             Automation[]
 }
 
 model Conversation {
@@ -100,6 +103,56 @@ model BrainSettings {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   user          User     @relation(fields: [userId], references: [id])
+}
+
+model NotificationPreferences {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  enabled               Boolean  @default(true)
+  reminderNotifications Boolean  @default(true)
+  taskNotifications     Boolean  @default(true)
+  goalNotifications     Boolean  @default(true)
+  habitNotifications    Boolean  @default(true)
+  browserNotifications  Boolean  @default(false)
+  dailyBriefingEnabled  Boolean  @default(true)
+  dailyBriefingTime     String   @default("08:00")
+  quietHoursEnabled     Boolean  @default(false)
+  quietHoursStart       String   @default("22:00")
+  quietHoursEnd         String   @default("08:00")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  user                  User     @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  link      String?
+  refId     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Reminder {
+  id        String    @id @default(cuid())
+  userId    String
+  title     String
+  message   String    @default("")
+  remindAt  DateTime
+  nextRunAt DateTime
+  frequency String    @default("once")
+  enabled   Boolean   @default(true)
+  fired     Boolean   @default(false)
+  notified  Boolean   @default(false)
+  log       Json      @default("[]")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id])
 }
 
 model UserApiKey {

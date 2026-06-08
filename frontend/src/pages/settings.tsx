@@ -1,18 +1,20 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
 import { useAuth } from '@/store/auth'
 import { useTheme, builtinThemes } from '@/store/theme'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { keysService } from '@/services/keys.service'
+import { notificationsService } from '@/services/notifications.service'
 import apiClient from '@/api/client'
 import { config } from '@/config'
 import {
-  User, Shield, Palette, Activity, LogOut, Save, Moon, Monitor,
-  Terminal, Check, Pencil, Calendar, KeyRound, ExternalLink,
-  Loader2, X, Plus, Trash2, Wifi,
+  User, Shield, Palette, Activity, LogOut, Save, 
+  Terminal, Check, Pencil, Monitor, KeyRound, ExternalLink,
+  Loader2, X, Plus, Trash2, Wifi, Bell,
 } from 'lucide-react'
-import type { UserApiKey } from '@/types/api'
+import type { UserApiKey, NotificationPreferences } from '@/types/api'
 
 const providers = [
   { id: 'nvidia', name: 'NVIDIA', desc: 'Chat, vision & embeddings' },
@@ -28,6 +30,7 @@ const sections = [
   { id: 'security', label: 'Security', icon: Shield },
   { id: 'api-keys', label: 'API Keys', icon: KeyRound },
   { id: 'theme', label: 'Theme', icon: Palette },
+  { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'usage', label: 'Usage', icon: Activity },
 ] as const
 type Section = (typeof sections)[number]['id']
@@ -44,6 +47,40 @@ export function SettingsPage() {
   const [newKey, setNewKey] = useState('')
   const [testing, setTesting] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<{ providerId: string; success: boolean; message: string } | null>(null)
+
+  const [browserPermission, setBrowserPermission] = useState<NotificationPermission>('default')
+  const [notifSaveMsg, setNotifSaveMsg] = useState('')
+
+  useEffect(() => {
+    if ('Notification' in window) {
+      setBrowserPermission(Notification.permission)
+    }
+  }, [])
+
+  const { data: notifPrefs, isLoading: notifLoading } = useQuery({
+    queryKey: ['notification-preferences'],
+    queryFn: async () => (await notificationsService.getPreferences()).data as NotificationPreferences,
+  })
+
+  const notifMutation = useMutation({
+    mutationFn: (data: Partial<NotificationPreferences>) => notificationsService.updatePreferences(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notification-preferences'] })
+      setNotifSaveMsg('Saved')
+      setTimeout(() => setNotifSaveMsg(''), 2000)
+    },
+  })
+
+  const updateNotif = useCallback((data: Partial<NotificationPreferences>) => {
+    notifMutation.mutate(data)
+  }, [notifMutation])
+
+  const handleBrowserNotification = async () => {
+    if (!('Notification' in window)) return
+    const perm = await Notification.requestPermission()
+    setBrowserPermission(perm)
+    updateNotif({ browserNotifications: perm === 'granted' })
+  }
 
   const { data: keys = [], isLoading: keysLoading } = useQuery({
     queryKey: ['api-keys'],
@@ -379,6 +416,129 @@ export function SettingsPage() {
                     </span>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {active === 'notifications' && notifPrefs && (
+              <div className="space-y-4">
+                <div className="rounded-[4px] border border-base-800 bg-surface overflow-hidden">
+                  <div className="px-4 py-3 md:px-5 md:py-4 border-b border-base-800 bg-surface-alt flex items-center gap-2">
+                    <Bell className="size-4 text-accent" />
+                    <h2 className="text-[12px] font-medium text-base-200 font-mono">Notification Center</h2>
+                    <span className="text-[10px] text-base-600 font-mono ml-2">All notifications are unified in one place</span>
+                  </div>
+                  <div className="p-4 md:p-5 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[12px] font-medium text-base-200 font-mono">Enable Notifications</p>
+                        <p className="text-[10px] text-base-500 font-mono mt-0.5">Master toggle for all notification delivery</p>
+                      </div>
+                      <Switch checked={notifPrefs.enabled} onChange={(v) => updateNotif({ enabled: v })} />
+                    </div>
+
+                    <div className="border-t border-base-800 pt-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[12px] font-medium text-base-200 font-mono">Browser Notifications</p>
+                          <p className="text-[10px] text-base-500 font-mono mt-0.5">
+                            {browserPermission === 'granted' ? (
+                              <span className="text-emerald-400">Allowed — native OS notifications</span>
+                            ) : browserPermission === 'denied' ? (
+                              <span className="text-red-400">Denied — check browser settings</span>
+                            ) : (
+                              <span className="text-yellow-400">Not requested</span>
+                            )}
+                          </p>
+                        </div>
+                        {browserPermission !== 'denied' && (
+                          <Button variant="secondary" size="sm" onClick={handleBrowserNotification} className="text-[10px]">
+                            {browserPermission === 'granted' ? 'Revoke' : 'Enable'}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="border-t border-base-800 pt-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[12px] font-medium text-base-200 font-mono">Reminder Popups</p>
+                          <p className="text-[10px] text-base-500 font-mono mt-0.5">In-app toast when a scheduled reminder fires</p>
+                        </div>
+                        <Switch checked={notifPrefs.reminderNotifications} onChange={(v) => updateNotif({ reminderNotifications: v })} />
+                      </div>
+                    </div>
+
+                    <div className="border-t border-base-800 pt-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[12px] font-medium text-base-200 font-mono">Reminder Sounds</p>
+                          <p className="text-[10px] text-base-500 font-mono mt-0.5">Play a chime when a reminder fires</p>
+                        </div>
+                        <Switch
+                          checked={localStorage.getItem('toolstack_notification_sound') !== 'false'}
+                          onChange={(v) => localStorage.setItem('toolstack_notification_sound', String(v))}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="border-t border-base-800 pt-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[12px] font-medium text-base-200 font-mono">Task Due Notifications</p>
+                          <p className="text-[10px] text-base-500 font-mono mt-0.5">Notify when tasks are overdue or due soon</p>
+                        </div>
+                        <Switch checked={notifPrefs.taskNotifications} onChange={(v) => updateNotif({ taskNotifications: v })} />
+                      </div>
+                    </div>
+
+                    <div className="border-t border-base-800 pt-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[12px] font-medium text-base-200 font-mono">Habit Reminders</p>
+                          <p className="text-[10px] text-base-500 font-mono mt-0.5">Warn when a streak is at risk</p>
+                        </div>
+                        <Switch checked={notifPrefs.habitNotifications} onChange={(v) => updateNotif({ habitNotifications: v })} />
+                      </div>
+                    </div>
+
+                    <div className="border-t border-base-800 pt-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[12px] font-medium text-base-200 font-mono">Goal Deadline Notifications</p>
+                          <p className="text-[10px] text-base-500 font-mono mt-0.5">Alert on approaching or completed goals</p>
+                        </div>
+                        <Switch checked={notifPrefs.goalNotifications} onChange={(v) => updateNotif({ goalNotifications: v })} />
+                      </div>
+                    </div>
+
+                    <div className="border-t border-base-800 pt-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[12px] font-medium text-base-200 font-mono">Daily Briefing</p>
+                          <p className="text-[10px] text-base-500 font-mono mt-0.5">Morning summary of tasks, habits, and goals</p>
+                        </div>
+                        <Switch checked={notifPrefs.dailyBriefingEnabled} onChange={(v) => updateNotif({ dailyBriefingEnabled: v })} />
+                      </div>
+                      {notifPrefs.dailyBriefingEnabled && (
+                        <div className="mt-3">
+                          <label className="text-[10px] font-medium text-base-400 mb-1 block font-mono uppercase tracking-wider">Delivery Time</label>
+                          <Input
+                            type="time"
+                            value={notifPrefs.dailyBriefingTime}
+                            onChange={(e) => updateNotif({ dailyBriefingTime: e.target.value })}
+                            className="h-8 text-[12px] w-48 font-mono"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {notifSaveMsg && (
+                  <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-accent">
+                    <Check className="size-3" /> {notifSaveMsg}
+                  </div>
+                )}
               </div>
             )}
 

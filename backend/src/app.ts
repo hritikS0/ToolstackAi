@@ -47,6 +47,9 @@ import tasksRoutes from "./features/tasks/tasks.routes.js";
 import goalsRoutes from "./features/goals/goals.routes.js";
 import briefingRoutes from "./features/briefing/briefing.routes.js";
 import projectsRoutes from "./features/projects/projects.routes.js";
+import notificationRoutes from "./features/notifications/notification.routes.js";
+import reminderRoutes from "./features/reminders/reminder.routes.js";
+import { startScheduler } from "./shared/scheduler/scheduler.js";
 
 app.use("/api/auth", authRoutes);
 app.use("/api/chat", conversationRoutes);
@@ -65,7 +68,11 @@ app.use("/api/tasks", tasksRoutes);
 app.use("/api/goals", goalsRoutes);
 app.use("/api/briefing", briefingRoutes);
 app.use("/api/projects", projectsRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/reminders", reminderRoutes);
 
 app.use(errorHandler);
+
+startScheduler();
 
 export default app;

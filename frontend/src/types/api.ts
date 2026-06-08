@@ -288,3 +288,50 @@ export interface Project {
     habits: number
   }
 }
+
+export interface NotificationPreferences {
+  id: string
+  userId: string
+  enabled: boolean
+  reminderNotifications: boolean
+  taskNotifications: boolean
+  goalNotifications: boolean
+  habitNotifications: boolean
+  browserNotifications: boolean
+  dailyBriefingEnabled: boolean
+  dailyBriefingTime: string
+  quietHoursEnabled: boolean
+  quietHoursStart: string
+  quietHoursEnd: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AppNotification {
+  id: string
+  userId: string
+  type: 'task' | 'goal' | 'habit' | 'reminder' | 'system'
+  title: string
+  message: string
+  read: boolean
+  link?: string | null
+  refId?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Reminder {
+  id: string
+  userId: string
+  title: string
+  message: string
+  remindAt: string
+  nextRunAt: string
+  frequency: 'once' | 'daily' | 'weekly'
+  enabled: boolean
+  fired: boolean
+  notified: boolean
+  log: { timestamp: string; action: string; notificationCreated: boolean; browserNotificationSent: boolean }[]
+  createdAt: string
+  updatedAt: string
+}

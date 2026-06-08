@@ -3,7 +3,9 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/store/auth'
 import { Sidebar } from '@/components/layout/sidebar'
 import { UserMenu } from '@/components/layout/user-menu'
+import { NotificationBell } from '@/components/layout/notification-bell'
 import { ThemeModal } from '@/components/theme/theme-modal'
+import { ToastProvider } from '@/components/ui/toast'
 import { useTheme } from '@/store/theme'
 import { config } from '@/config'
 import { Menu } from 'lucide-react'
@@ -21,6 +23,7 @@ export function AppLayout() {
   if (!isAuthenticated) return <Navigate to={config.auth.loginPath} replace />
 
   return (
+    <ToastProvider>
     <div className="h-dvh flex overflow-hidden bg-workspace">
       <div className="hidden md:block">
         <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(s => !s)} onThemeClick={() => setIsOpen(true)} />
@@ -41,6 +44,7 @@ export function AppLayout() {
             <Menu className="size-4" />
           </button>
           <div className="flex-1" />
+          <NotificationBell />
           <UserMenu />
         </div>
         <main className="flex-1 overflow-hidden">
@@ -49,5 +53,6 @@ export function AppLayout() {
       </div>
       <ThemeModal />
     </div>
+    </ToastProvider>
   )
 }
