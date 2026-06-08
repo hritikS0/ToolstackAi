@@ -56,6 +56,7 @@ export async function updateTask(userId: string, taskId: string, data: UpdateTas
       ...(data.title !== undefined && { title: data.title }),
       ...(data.description !== undefined && { description: data.description }),
       ...(data.priority !== undefined && { priority: data.priority }),
+      ...(data.status !== undefined && { status: data.status }),
       ...(data.dueDate !== undefined && { dueDate: data.dueDate ? new Date(data.dueDate) : null }),
       ...(data.tags !== undefined && { tags: data.tags }),
       ...(data.projectId !== undefined && { projectId: data.projectId }),
