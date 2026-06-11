@@ -127,6 +127,10 @@ export interface ApiKeyTestResult {
   message: string
 }
 
+export interface ApiKeysStatus {
+  hasKeys: boolean
+}
+
 export interface DashboardData {
   stats: {
     conversations: number

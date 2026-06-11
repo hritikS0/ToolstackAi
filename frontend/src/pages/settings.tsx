@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/store/auth'
@@ -36,7 +37,16 @@ export function SettingsPage() {
   const { user, logout, refreshUser } = useAuth()
   const { theme, setTheme, setIsOpen: openThemeModal } = useTheme()
   const queryClient = useQueryClient()
-  const [active, setActive] = useState<Section>('profile')
+  const [searchParams] = useSearchParams()
+  const [active, setActive] = useState<Section>(
+    (searchParams.get('tab') as Section) || 'profile'
+  )
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab && sections.some(s => s.id === tab)) {
+      setActive(tab as Section)
+    }
+  }, [searchParams])
   const [fullName, setFullName] = useState(user?.fullName || '')
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState('')

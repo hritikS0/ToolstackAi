@@ -1,7 +1,11 @@
 import apiClient from '@/api/client'
-import type { UserApiKey, ApiKeyTestResult } from '@/types/api'
+import type { UserApiKey, ApiKeyTestResult, ApiKeysStatus } from '@/types/api'
 
 export const keysService = {
+  async getKeysStatus() {
+    const res = await apiClient.get<{ success: boolean; data: ApiKeysStatus }>('/keys/status')
+    return res.data
+  },
   async getKeys() {
     const res = await apiClient.get<{ success: boolean; data: UserApiKey[] }>('/keys')
     return res.data

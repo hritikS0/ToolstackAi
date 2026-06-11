@@ -20,6 +20,12 @@ const PROVIDER_AUTH_HEADERS: Record<string, (key: string) => Record<string, stri
   gemini: (key) => ({ "x-goog-api-key": key }),
 };
 
+export async function hasKeys(userId: string) {
+  const prisma = getPrismaClient();
+  const count = await prisma.userApiKey.count({ where: { userId, isActive: true } });
+  return count > 0;
+}
+
 export async function getKeys(userId: string) {
   const prisma = getPrismaClient();
   const keys = await prisma.userApiKey.findMany({ where: { userId } });

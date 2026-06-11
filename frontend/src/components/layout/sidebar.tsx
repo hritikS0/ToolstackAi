@@ -40,7 +40,13 @@ export function Sidebar({ collapsed, onToggle, onThemeClick }: { collapsed: bool
     queryFn: async () => (await chatService.getConversations()).data || [],
   })
 
-  const chatConversations = (conversations as Conversation[]).filter(c => c.type === 'chat' || !c.type)
+  const chatConversations = (conversations as Conversation[])
+    .filter(c => c.type === 'chat' || !c.type)
+    .sort((a, b) => {
+      const aWelcome = a.settings?.isWelcome ? 1 : 0
+      const bWelcome = b.settings?.isWelcome ? 1 : 0
+      return bWelcome - aWelcome
+    })
   const pdfConversations = (conversations as Conversation[]).filter(c => c.type === 'pdf')
 
   const handleNewChat = async (e: React.MouseEvent) => {

@@ -2,6 +2,17 @@ import { Request, Response, NextFunction } from "express";
 import { createKeySchema, testKeySchema } from "./api-keys.validator.js";
 import * as keysService from "./api-keys.service.js";
 
+export async function getStatus(req: Request, res: Response, next: NextFunction) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+    const configured = await keysService.hasKeys(userId);
+    res.json({ success: true, data: { hasKeys: configured } });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function getKeys(req: Request, res: Response, next: NextFunction) {
   try {
     const userId = req.user?.id;

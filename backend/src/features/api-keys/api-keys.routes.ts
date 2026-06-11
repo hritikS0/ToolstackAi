@@ -4,6 +4,7 @@ import * as keysController from "./api-keys.controller.js";
 
 const router = Router();
 
+router.get("/status", authenticate, keysController.getStatus);
 router.get("/", authenticate, keysController.getKeys);
 router.post("/", authenticate, keysController.saveKey);
 router.post("/test", authenticate, keysController.testKey);

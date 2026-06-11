@@ -7,9 +7,11 @@ interface AuthContextType {
   user: User | null
   isAuthenticated: boolean
   isLoading: boolean
+  welcomeConversationId: string | null
   login: (email: string, password: string) => Promise<void>
-  register: (email: string, password: string, fullName: string) => Promise<void>
+  register: (email: string, password: string, fullName: string) => Promise<string | null>
   logout: () => void
+  clearWelcomeId: () => void
   refreshUser: () => User | null
 }
 
@@ -18,6 +20,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(authService.getUser())
   const [isLoading, setIsLoading] = useState(false)
+  const [welcomeConversationId, setWelcomeConversationId] = useState<string | null>(null)
 
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true)
@@ -39,11 +42,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(config.auth.tokenKey, res.token)
         localStorage.setItem(config.auth.userKey, JSON.stringify(res.user))
         setUser(res.user)
+        if (res.welcomeConversationId) {
+          setWelcomeConversationId(res.welcomeConversationId)
+        }
+        return res.welcomeConversationId || null
       }
     } finally { setIsLoading(false) }
+    return null
   }, [])
 
-  const logout = useCallback(() => { authService.logout(); setUser(null) }, [])
+  const clearWelcomeId = useCallback(() => setWelcomeConversationId(null), [])
+
+  const logout = useCallback(() => { authService.logout(); setUser(null); setWelcomeConversationId(null) }, [])
 
   const refreshUser = useCallback(() => {
     const u = authService.getUser()
@@ -51,7 +61,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return u
   }, [])
 
-  const value = useMemo(() => ({ user, isAuthenticated: !!user, isLoading, login, register, logout, refreshUser }), [user, isLoading, login, register, logout, refreshUser])
+  const value = useMemo(() => ({
+    user, isAuthenticated: !!user, isLoading, welcomeConversationId,
+    login, register, logout, clearWelcomeId, refreshUser,
+  }), [user, isLoading, welcomeConversationId, login, register, logout, clearWelcomeId, refreshUser])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

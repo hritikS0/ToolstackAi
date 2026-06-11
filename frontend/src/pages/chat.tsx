@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Composer } from '@/components/chat/composer'
 import { MessageBlock } from '@/components/chat/message-block'
 import { formatRelativeTime, cn } from '@/lib/utils'
-import { MessageSquare, Plus, Loader2, AlertTriangle, BrainCircuit, Bug, Code, Lightbulb, Sparkles, Globe } from 'lucide-react'
+import { MessageSquare, Plus, Loader2, AlertTriangle, BrainCircuit, Bug, Code, Lightbulb, Sparkles, Globe, KeyRound, Settings, ArrowRight } from 'lucide-react'
 import type { Message, Conversation } from '@/types/api'
 import { motion } from 'framer-motion'
+import { keysService } from '@/services/keys.service'
 
 const THINKING_MESSAGES = [
   'Thinking...',
@@ -102,6 +103,17 @@ export function ChatPage() {
       return (res.data || []) as Message[]
     },
     enabled: !!id,
+  })
+
+  const { data: keysStatus } = useQuery({
+    queryKey: ['keysStatus'],
+    queryFn: async () => {
+      try {
+        return (await keysService.getKeysStatus()).data
+      } catch {
+        return { hasKeys: false }
+      }
+    },
   })
 
   const scrollToBottom = useCallback(() => {
@@ -327,6 +339,8 @@ export function ChatPage() {
   const currentConv = conversations.find(c => c.id === id)
   const currentSettings = currentConv?.settings || {}
   const webSearchEnabled = !!currentSettings.webSearch
+  const isWelcomeConversation = !!currentSettings.isWelcome
+  const hasApiKeys = keysStatus?.hasKeys ?? true
 
   return (
     <div className="flex h-full">
@@ -480,6 +494,34 @@ export function ChatPage() {
                   </div>
                 )}
 
+                {isWelcomeConversation && !hasApiKeys && (
+                  <div className="rounded-[4px] border border-amber-500/20 bg-amber-500/5 p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="size-6 rounded-[4px] bg-amber-500 flex items-center justify-center">
+                        <KeyRound className="size-3.5 text-neutral-950" />
+                      </div>
+                      <span className="text-sm font-semibold text-amber-400 font-mono">Connect an AI provider to get started</span>
+                    </div>
+                    <p className="text-sm text-neutral-400 font-mono leading-relaxed">
+                      Add an API key from NVIDIA, OpenAI, Anthropic, or any supported provider to unlock AI-powered chat, document analysis, and more.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button variant="primary" size="sm" onClick={() => navigate('/settings?tab=api-keys')}>
+                        <KeyRound className="size-3.5" />
+                        Add API Key
+                      </Button>
+                      <Button variant="secondary" size="sm" onClick={() => navigate('/settings?tab=api-keys')}>
+                        <Settings className="size-3.5" />
+                        Open Settings
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => navigate(`/chat/${id}`)}>
+                        <ArrowRight className="size-3.5" />
+                        Explore Workspace
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 <div ref={messagesEndRef} />
               </div>
             )}
@@ -496,7 +538,24 @@ export function ChatPage() {
           </div>
         )}
 
-        {id && (
+        {id && !hasApiKeys ? (
+          <div className="shrink-0 border-t border-base-800 bg-base-950/60 backdrop-blur-sm px-4 py-3">
+            <div className="flex items-center justify-between gap-3 max-w-4xl mx-auto">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="size-7 rounded-[4px] bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                  <KeyRound className="size-3.5 text-amber-400" />
+                </div>
+                <p className="text-sm text-neutral-400 font-mono truncate">
+                  <span className="text-amber-400 font-semibold">No API key configured</span> — add one in settings to start chatting
+                </p>
+              </div>
+              <Button variant="primary" size="sm" onClick={() => navigate('/settings?tab=api-keys')}>
+                <Settings className="size-3.5" />
+                Setup
+              </Button>
+            </div>
+          </div>
+        ) : id ? (
           <Composer
             value={input}
             onChange={setInput}
@@ -510,7 +569,7 @@ export function ChatPage() {
               setAttachedImage(null)
             }}
           />
-        )}
+        ) : null}
       </div>
     </div>
   )

@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/store/auth'
+import { Button } from '@/components/ui/button'
 import { dashboardService } from '@/services/dashboard.service'
 import { briefingService } from '@/services/briefing.service'
 import { habitsService } from '@/services/habits.service'
@@ -8,9 +9,11 @@ import { formatRelativeTime, truncate, cn } from '@/lib/utils'
 import {
   MessageSquare, FileText, Image, Bug, Terminal, Brain, Sparkles, Target,
   Trophy, Wrench, Heart, BookOpen,
-  FolderOpen, ChevronRight, CheckSquare, Flame, Clock, AlertTriangle, CheckCircle2, Circle
+  FolderOpen, ChevronRight, CheckSquare, Flame, Clock, AlertTriangle, CheckCircle2, Circle,
+  KeyRound, Settings, ArrowRight, Palette
 } from 'lucide-react'
 import type { DashboardData, BriefingData, Habit } from '@/types/api'
+import { keysService } from '@/services/keys.service'
 
 const quickActions = [
   { icon: MessageSquare, label: 'New Chat', path: '/chat', key: 'k1' },
@@ -59,6 +62,74 @@ function BriefingSection({ icon: Icon, title, children, action }: { icon: typeof
   )
 }
 
+function OnboardingDashboard({ firstName }: { firstName: string }) {
+  const navigate = useNavigate()
+
+  const checklistItems = [
+    { label: 'Add API Key', desc: 'Connect NVIDIA, OpenAI, or any provider', path: '/settings?tab=api-keys', icon: KeyRound },
+    { label: 'Send First Message', desc: 'Start a conversation with AI', path: '/chat', icon: MessageSquare },
+    { label: 'Create First Project', desc: 'Organize your work into projects', path: '/projects', icon: FolderOpen },
+    { label: 'Create First Habit', desc: 'Build daily routines and streaks', path: '/habits', icon: Flame },
+    { label: 'Explore Themes', desc: 'Customize your workspace look', path: '/settings?tab=theme', icon: Palette },
+  ]
+
+  return (
+    <div className="h-full overflow-y-auto">
+      <div className="p-4 space-y-4 max-w-2xl mx-auto">
+        <div className="text-center pt-8">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] border border-base-800 bg-surface text-[13px] text-base-500 mb-4 font-mono">
+            <Terminal className="size-3 text-accent" />
+            developer operating system
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight text-base-100 mb-1 font-mono">
+            Welcome, <span className="text-accent">{firstName}</span>
+          </h1>
+          <p className="text-sm text-base-400 font-mono mb-8">Your workspace is ready. Let's get you set up.</p>
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 mb-1">
+            <CheckSquare className="size-4 text-accent" />
+            <span className="text-sm font-semibold text-base-200 font-mono uppercase tracking-wider">Getting Started</span>
+          </div>
+
+          {checklistItems.map((item, i) => (
+            <button
+              type="button"
+              key={item.label}
+              onClick={() => navigate(item.path)}
+              className="flex items-center gap-3 w-full p-3 rounded-[4px] border border-base-800 bg-surface hover:border-accent/30 hover:bg-base-800/30 transition-all duration-200 text-left group"
+            >
+              <div className="flex items-center justify-center size-7 rounded-[4px] bg-base-800/50 border border-base-700 text-base-400 group-hover:bg-accent/10 group-hover:border-accent/20 group-hover:text-accent transition-all shrink-0">
+                <span className="text-xs font-mono font-semibold">{i + 1}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <item.icon className="size-3.5 text-base-500 group-hover:text-base-300 transition-colors" />
+                  <span className="text-sm font-medium text-base-200 font-mono">{item.label}</span>
+                </div>
+                <p className="text-xs text-base-500 mt-0.5 font-mono">{item.desc}</p>
+              </div>
+              <ArrowRight className="size-3.5 text-base-700 group-hover:text-accent transition-colors shrink-0" />
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-center gap-2 pt-4">
+          <Button variant="primary" size="sm" onClick={() => navigate('/settings?tab=api-keys')}>
+            <KeyRound className="size-3.5" />
+            Add API Key
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => navigate('/chat')}>
+            <MessageSquare className="size-3.5" />
+            Start Chatting
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function EmptyDashboard({ firstName }: { firstName: string }) {
   const navigate = useNavigate()
   return (
@@ -102,6 +173,19 @@ export function DashboardPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const firstName = user?.fullName?.split(' ')[0] || 'developer'
+
+  const { data: keysStatus } = useQuery({
+    queryKey: ['keysStatus'],
+    queryFn: async () => {
+      try {
+        return (await keysService.getKeysStatus()).data
+      } catch {
+        return { hasKeys: false }
+      }
+    },
+  })
+
+  const hasApiKeys = keysStatus?.hasKeys ?? true
 
   const { data: habits = [] } = useQuery({
     queryKey: ['habits'],
@@ -373,6 +457,10 @@ export function DashboardPage() {
     const d = legacyData as DashboardData
     const isEmpty = d.stats.conversations === 0 && d.stats.memories === 0 && d.stats.images === 0 && d.stats.debugSessions === 0
 
+    if (isEmpty && !hasApiKeys) {
+      return <OnboardingDashboard firstName={firstName} />
+    }
+
     if (isEmpty) {
       return <EmptyDashboard firstName={firstName} />
     }
@@ -576,6 +664,10 @@ export function DashboardPage() {
         </div>
       </div>
     )
+  }
+
+  if (!hasApiKeys) {
+    return <OnboardingDashboard firstName={firstName} />
   }
 
   return <EmptyDashboard firstName={firstName} />

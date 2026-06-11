@@ -1,151 +1,111 @@
 import { useEffect, useRef } from 'react'
 
 export function BackgroundEffects() {
-  const containerRef = useRef<HTMLDivElement>(null)
+  const glowRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // Check user preference for reduced motion
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     if (prefersReduced) return
 
     const handleMouseMove = (e: MouseEvent) => {
-      if (!containerRef.current) return
-      const { clientX, clientY } = e
-      const { innerWidth, innerHeight } = window
-      // 8px max displacement, very subtle and premium
-      const moveX = ((clientX - innerWidth / 2) / (innerWidth / 2)) * 8
-      const moveY = ((clientY - innerHeight / 2) / (innerHeight / 2)) * 8
-
-      containerRef.current.style.setProperty('--bg-mouse-x', `${moveX}px`)
-      containerRef.current.style.setProperty('--bg-mouse-y', `${moveY}px`)
+      if (!glowRef.current) return
+      const x = (e.clientX / window.innerWidth) * 100
+      const y = (e.clientY / window.innerHeight) * 100
+      glowRef.current.style.setProperty('--glow-x', `${x}%`)
+      glowRef.current.style.setProperty('--glow-y', `${y}%`)
     }
 
-    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mousemove', handleMouseMove, { passive: true })
     return () => window.removeEventListener('mousemove', handleMouseMove)
   }, [])
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-      {/* CSS Animation Styles */}
       <style>{`
         @media (prefers-reduced-motion: no-preference) {
-          .drift-layer-1 {
-            animation: drift-1 30s ease-in-out infinite alternate;
-            transform-origin: center;
-          }
-          .drift-layer-2 {
-            animation: drift-2 36s ease-in-out infinite alternate;
-            transform-origin: center;
-          }
-          .drift-layer-3 {
-            animation: drift-3 42s ease-in-out infinite alternate;
-            transform-origin: center;
-          }
-          .flow-line {
-            stroke-dasharray: 6 18;
-            animation: flow 45s linear infinite;
-          }
-          .pulse-circle {
-            animation: pulse 4s ease-in-out infinite alternate;
+          .dot-float-1 { animation: float1 14s ease-in-out infinite; }
+          .dot-float-2 { animation: float2 18s ease-in-out infinite; }
+          .dot-float-3 { animation: float3 16s ease-in-out infinite; }
+          .dot-float-4 { animation: float4 20s ease-in-out infinite; }
+          .dot-float-5 { animation: float5 22s ease-in-out infinite; }
+          .grid-drift { animation: gridPulse 12s ease-in-out infinite alternate; }
+          .scan-line {
+            animation: scanDown 8s linear infinite;
           }
         }
-        @keyframes drift-1 {
-          0% { transform: translate(0px, 0px) rotate(0deg); }
-          50% { transform: translate(12px, -8px) rotate(0.5deg); }
-          100% { transform: translate(0px, 0px) rotate(0deg); }
+        @keyframes float1 {
+          0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.3; }
+          25% { transform: translate(20px, -30px) scale(1.2); opacity: 0.6; }
+          50% { transform: translate(-10px, -50px) scale(0.8); opacity: 0.4; }
+          75% { transform: translate(-25px, -15px) scale(1.1); opacity: 0.5; }
         }
-        @keyframes drift-2 {
-          0% { transform: translate(0px, 0px) rotate(0deg); }
-          50% { transform: translate(-10px, 10px) rotate(-0.8deg); }
-          100% { transform: translate(0px, 0px) rotate(0deg); }
+        @keyframes float2 {
+          0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+          33% { transform: translate(-15px, -25px) scale(0.9); opacity: 0.6; }
+          66% { transform: translate(15px, -45px) scale(1.15); opacity: 0.3; }
         }
-        @keyframes drift-3 {
-          0% { transform: translate(0px, 0px) rotate(0deg); }
-          50% { transform: translate(8px, 12px) rotate(0.4deg); }
-          100% { transform: translate(0px, 0px) rotate(0deg); }
+        @keyframes float3 {
+          0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.25; }
+          50% { transform: translate(10px, -40px) scale(1.3); opacity: 0.5; }
         }
-        @keyframes flow {
-          to { stroke-dashoffset: -300; }
+        @keyframes float4 {
+          0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.35; }
+          30% { transform: translate(-20px, -20px) scale(0.85); opacity: 0.55; }
+          60% { transform: translate(15px, -35px) scale(1.2); opacity: 0.3; }
         }
-        @keyframes pulse {
-          0% { opacity: 0.25; r: 1.5px; }
-          100% { opacity: 0.7; r: 2.5px; }
+        @keyframes float5 {
+          0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.2; }
+          40% { transform: translate(25px, -30px) scale(1.1); opacity: 0.45; }
+          80% { transform: translate(-10px, -55px) scale(0.9); opacity: 0.35; }
+        }
+        @keyframes gridPulse {
+          0% { opacity: 0.02; }
+          100% { opacity: 0.04; }
+        }
+        @keyframes scanDown {
+          0% { transform: translateY(-100%); }
+          100% { transform: translateY(100vh); }
         }
       `}</style>
 
-      {/* Terminal grid */}
-      <div 
-        className="absolute inset-0 z-0 opacity-[0.03]"
+      {/* Animated terminal grid */}
+      <div
+        className="absolute inset-0 grid-drift"
         style={{
           backgroundImage: `
-            linear-gradient(to right, rgba(245, 158, 11, 0.25) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(245, 158, 11, 0.25) 1px, transparent 1px)
+            linear-gradient(to right, rgba(245, 158, 11, 0.12) 0.5px, transparent 0.5px),
+            linear-gradient(to bottom, rgba(245, 158, 11, 0.12) 0.5px, transparent 0.5px)
           `,
-          backgroundSize: '40px 40px',
-          maskImage: 'radial-gradient(circle at 50% 30%, black 25%, transparent 80%)',
-          WebkitMaskImage: 'radial-gradient(circle at 50% 30%, black 25%, transparent 80%)',
+          backgroundSize: '48px 48px',
+          maskImage: 'radial-gradient(ellipse 70% 60% at 50% 35%, black 30%, transparent 70%)',
+          WebkitMaskImage: 'radial-gradient(ellipse 70% 60% at 50% 35%, black 30%, transparent 70%)',
         }}
       />
 
-      {/* Drifting SVG Knowledge Graph Layer */}
-      <div 
-        ref={containerRef}
-        className="absolute inset-0 z-10 w-full h-full opacity-60"
+      {/* Subtle scan line */}
+      <div
+        className="scan-line absolute left-0 right-0 h-px opacity-0"
         style={{
-          transform: 'translate(var(--bg-mouse-x, 0px), var(--bg-mouse-y, 0px))',
-          transition: 'transform 1s cubic-bezier(0.22, 1, 0.36, 1)',
+          background: 'linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.15), transparent)',
         }}
-      >
-        <svg className="w-full h-full min-h-[600px]" viewBox="0 0 1000 600" fill="none" xmlns="http://www.w3.org/2000/svg">
-          {/* Layer 1 (Left Area) */}
-          <g className="drift-layer-1">
-            {/* Lines */}
-            <line x1="120" y1="120" x2="220" y2="180" stroke="rgba(245, 158, 11, 0.05)" strokeWidth="1" />
-            <line x1="220" y1="180" x2="160" y2="280" stroke="rgba(245, 158, 11, 0.05)" strokeWidth="1" />
-            <line x1="160" y1="280" x2="300" y2="220" stroke="rgba(245, 158, 11, 0.05)" strokeWidth="1" className="flow-line" />
-            <line x1="300" y1="220" x2="220" y2="180" stroke="rgba(245, 158, 11, 0.05)" strokeWidth="1" />
-            <line x1="300" y1="220" x2="360" y2="340" stroke="rgba(245, 158, 11, 0.05)" strokeWidth="1" />
-            
-            {/* Nodes */}
-            <circle cx="120" cy="120" r="1.5" fill="#f59e0b" className="opacity-30" />
-            <circle cx="220" cy="180" r="2" fill="#f59e0b" className="opacity-50" />
-            <circle cx="160" cy="280" r="1.5" fill="#f59e0b" className="opacity-30" />
-            <circle cx="300" cy="220" r="2.5" fill="#f59e0b" className="pulse-circle" />
-            <circle cx="360" cy="340" r="2" fill="#f59e0b" className="opacity-40" />
-          </g>
+      />
 
-          {/* Layer 2 (Right Area) */}
-          <g className="drift-layer-2">
-            {/* Lines */}
-            <line x1="880" y1="140" x2="740" y2="200" stroke="rgba(245, 158, 11, 0.05)" strokeWidth="1" />
-            <line x1="740" y1="200" x2="800" y2="320" stroke="rgba(245, 158, 11, 0.05)" strokeWidth="1" className="flow-line" />
-            <line x1="800" y1="320" x2="920" y2="270" stroke="rgba(245, 158, 11, 0.05)" strokeWidth="1" />
-            <line x1="920" y1="270" x2="880" y2="140" stroke="rgba(245, 158, 11, 0.05)" strokeWidth="1" />
-            <line x1="740" y1="200" x2="640" y2="290" stroke="rgba(245, 158, 11, 0.05)" strokeWidth="1" />
+      {/* Mouse-reactive glow */}
+      <div
+        ref={glowRef}
+        className="absolute inset-0"
+        style={{
+          background: 'radial-gradient(500px circle at var(--glow-x, 50%) var(--glow-y, 30%), rgba(245, 158, 11, 0.06), transparent 60%)',
+        }}
+      />
 
-            {/* Nodes */}
-            <circle cx="880" cy="140" r="2" fill="#f59e0b" className="opacity-45" />
-            <circle cx="740" cy="200" r="2.5" fill="#f59e0b" className="pulse-circle" />
-            <circle cx="800" cy="320" r="1.5" fill="#f59e0b" className="opacity-30" />
-            <circle cx="920" cy="270" r="2" fill="#f59e0b" className="opacity-50" />
-            <circle cx="640" cy="290" r="1.5" fill="#f59e0b" className="opacity-25" />
-          </g>
-
-          {/* Layer 3 (Bottom Center) */}
-          <g className="drift-layer-3">
-            {/* Lines */}
-            <line x1="450" y1="410" x2="560" y2="470" stroke="rgba(245, 158, 11, 0.05)" strokeWidth="1" />
-            <line x1="560" y1="470" x2="490" y2="520" stroke="rgba(245, 158, 11, 0.05)" strokeWidth="1" />
-            <line x1="490" y1="520" x2="390" y2="440" stroke="rgba(245, 158, 11, 0.05)" strokeWidth="1" className="flow-line" />
-            <line x1="390" y1="440" x2="450" y2="410" stroke="rgba(245, 158, 11, 0.05)" strokeWidth="1" />
-            
-            {/* Nodes */}
-            <circle cx="450" cy="410" r="2" fill="#f59e0b" className="opacity-40" />
-            <circle cx="560" cy="470" r="1.5" fill="#f59e0b" className="opacity-35" />
-            <circle cx="490" cy="520" r="2.5" fill="#f59e0b" className="pulse-circle" />
-            <circle cx="390" cy="440" r="2" fill="#f59e0b" className="opacity-50" />
-          </g>
-        </svg>
+      {/* Floating particles */}
+      <div className="absolute inset-0">
+        <div className="dot-float-1 absolute size-1.5 rounded-full bg-amber-500/30" style={{ left: '15%', top: '25%', filter: 'blur(1px)' }} />
+        <div className="dot-float-2 absolute size-1 rounded-full bg-amber-400/25" style={{ left: '75%', top: '35%', filter: 'blur(1px)' }} />
+        <div className="dot-float-3 absolute size-2 rounded-full bg-amber-500/20" style={{ left: '45%', top: '55%', filter: 'blur(1.5px)' }} />
+        <div className="dot-float-4 absolute size-1.5 rounded-full bg-amber-400/25" style={{ left: '85%', top: '65%', filter: 'blur(1px)' }} />
+        <div className="dot-float-5 absolute size-1 rounded-full bg-amber-500/30" style={{ left: '10%', top: '70%', filter: 'blur(1px)' }} />
       </div>
     </div>
   )

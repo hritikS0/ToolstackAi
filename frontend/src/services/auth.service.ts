@@ -8,7 +8,7 @@ export const authService = {
     return res.data
   },
   async register(data: { email: string; password: string; fullName: string }) {
-    const res = await apiClient.post<{ success: boolean; token: string; user: User }>('/auth/register', data)
+    const res = await apiClient.post<{ success: boolean; token: string; user: User; welcomeConversationId?: string | null }>('/auth/register', data)
     return res.data
   },
   logout() {

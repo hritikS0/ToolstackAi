@@ -18,7 +18,14 @@ export function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    try { await register(email, password, fullName); navigate(config.auth.dashboardPath) }
+    try {
+      const welcomeId = await register(email, password, fullName)
+      if (welcomeId) {
+        navigate(`/chat/${welcomeId}`)
+      } else {
+        navigate(config.auth.dashboardPath)
+      }
+    }
     catch { setError('Registration failed') }
   }
 
