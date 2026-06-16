@@ -1,6 +1,6 @@
 import apiClient from '@/api/client'
 import { config } from '@/config'
-import type { User } from '@/types/api'
+import type { User, ChangePasswordRequest } from '@/types/api'
 
 export const authService = {
   async login(data: { email: string; password: string }) {
@@ -9,6 +9,10 @@ export const authService = {
   },
   async register(data: { email: string; password: string; fullName: string }) {
     const res = await apiClient.post<{ success: boolean; token: string; user: User; welcomeConversationId?: string | null }>('/auth/register', data)
+    return res.data
+  },
+  async changePassword(data: ChangePasswordRequest) {
+    const res = await apiClient.put<{ success: boolean; message: string }>('/auth/password', data)
     return res.data
   },
   logout() {

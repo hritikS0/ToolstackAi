@@ -6,6 +6,7 @@ import { useAuth } from '@/store/auth'
 import { useTheme, builtinThemes } from '@/store/theme'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { keysService } from '@/services/keys.service'
+import { authService } from '@/services/auth.service'
 import apiClient from '@/api/client'
 import { config } from '@/config'
 import {
@@ -54,6 +55,13 @@ export function SettingsPage() {
   const [newKey, setNewKey] = useState('')
   const [testing, setTesting] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<{ providerId: string; success: boolean; message: string } | null>(null)
+
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordMsg, setPasswordMsg] = useState('')
+  const [passwordError, setPasswordError] = useState('')
+  const [changingPassword, setChangingPassword] = useState(false)
 
   const { data: keys = [], isLoading: keysLoading } = useQuery({
     queryKey: ['api-keys'],
@@ -106,6 +114,36 @@ export function SettingsPage() {
       setSaveMsg('Failed to save')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleChangePassword = async () => {
+    setPasswordMsg('')
+    setPasswordError('')
+    if (!currentPassword.trim() || !newPassword.trim() || !confirmPassword.trim()) {
+      setPasswordError('All fields are required')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match')
+      return
+    }
+    if (newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters')
+      return
+    }
+    setChangingPassword(true)
+    try {
+      await authService.changePassword({ currentPassword, newPassword })
+      setPasswordMsg('Password updated successfully')
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setTimeout(() => setPasswordMsg(''), 3000)
+    } catch (err: any) {
+      setPasswordError(err?.response?.data?.message || 'Failed to update password')
+    } finally {
+      setChangingPassword(false)
     }
   }
 
@@ -209,19 +247,33 @@ export function SettingsPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="text-[10px] font-medium text-base-400 mb-1 block font-mono uppercase tracking-wider">Current Password</label>
-                      <Input type="password" placeholder="Enter current password" className="h-8 text-[12px] w-full" />
+                      <Input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} placeholder="Enter current password" className="h-8 text-[12px] w-full" />
                     </div>
                     <div className="hidden md:block" />
                     <div>
                       <label className="text-[10px] font-medium text-base-400 mb-1 block font-mono uppercase tracking-wider">New Password</label>
-                      <Input type="password" placeholder="Enter new password" className="h-8 text-[12px] w-full" />
+                      <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Enter new password" className="h-8 text-[12px] w-full" />
                     </div>
                     <div>
                       <label className="text-[10px] font-medium text-base-400 mb-1 block font-mono uppercase tracking-wider">Confirm Password</label>
-                      <Input type="password" placeholder="Confirm new password" className="h-8 text-[12px] w-full" />
+                      <Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Confirm new password" className="h-8 text-[12px] w-full" />
                     </div>
                   </div>
-                  <Button variant="primary" size="sm" className="w-full md:w-auto justify-center">Update Password</Button>
+                  <div className="flex items-center gap-2">
+                    <Button variant="primary" size="sm" onClick={handleChangePassword} disabled={changingPassword} className="w-full md:w-auto justify-center">
+                      {changingPassword ? 'Updating...' : 'Update Password'}
+                    </Button>
+                    {passwordMsg && (
+                      <span className="flex items-center gap-1 text-[10px] font-mono text-emerald-400">
+                        <Check className="size-3" /> {passwordMsg}
+                      </span>
+                    )}
+                    {passwordError && (
+                      <span className="flex items-center gap-1 text-[10px] font-mono text-red-400">
+                        <X className="size-3" /> {passwordError}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

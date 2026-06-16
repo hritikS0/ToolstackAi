@@ -116,6 +116,28 @@ export async function loginUser(email: string, password: string) {
   return { token, user: { id: user.id, fullName: user.fullName, email: user.email, createdAt: user.createdAt } };
 }
 
+export async function changePassword(userId: string, currentPassword: string, newPassword: string) {
+  const prisma = getPrismaClient();
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    throw Object.assign(new Error("User not found"), { statusCode: 404 });
+  }
+
+  const valid = await bcrypt.compare(currentPassword, user.password);
+  if (!valid) {
+    throw Object.assign(new Error("Current password is incorrect"), { statusCode: 401 });
+  }
+
+  const hashed = await bcrypt.hash(newPassword, SALT_ROUNDS);
+  await prisma.user.update({
+    where: { id: userId },
+    data: { password: hashed },
+  });
+
+  return { message: "Password updated successfully" };
+}
+
 export async function updateProfile(userId: string, updates: { fullName?: string }) {
   const prisma = getPrismaClient();
 

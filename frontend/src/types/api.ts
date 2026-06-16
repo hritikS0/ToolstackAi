@@ -22,6 +22,11 @@ export interface RegisterRequest {
   fullName: string
 }
 
+export interface ChangePasswordRequest {
+  currentPassword: string
+  newPassword: string
+}
+
 export interface Conversation {
   id: string
   title: string | null
