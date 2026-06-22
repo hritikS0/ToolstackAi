@@ -92,7 +92,7 @@ export function ChatPage() {
 
   const { data: conversations = [] } = useQuery({
     queryKey: ['conversations'],
-    queryFn: async () => (await chatService.getConversations()).data || [],
+    queryFn: async () => (await chatService.getConversations(100, 0)).data || [],
   })
 
   const { data: messages = [], isLoading } = useQuery({

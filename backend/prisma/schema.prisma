@@ -37,6 +37,7 @@ model Conversation {
   title          String?
   userId         String
   createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @default(now()) @updatedAt
   type           String          @default("chat")
   storagePath    String?         @default("")
   threadId       String?

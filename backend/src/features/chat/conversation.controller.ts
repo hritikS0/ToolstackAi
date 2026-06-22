@@ -26,8 +26,10 @@ export async function getConversations(
   try {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
-    const conversations = await getConversationsService(userId);
-    res.status(200).json({ success: true, data: conversations });
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 20, 1), 100);
+    const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+    const result = await getConversationsService(userId, limit, offset);
+    res.status(200).json({ success: true, data: result.conversations, total: result.total, hasMore: result.hasMore });
   } catch (error) {
     next(error);
   }

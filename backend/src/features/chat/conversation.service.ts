@@ -20,14 +20,18 @@ export async function conversationService(title: string, userId: string) {
     },
   };
 }
-export async function getConversations(userId: string) {
+export async function getConversations(userId: string, limit = 20, offset = 0) {
   const prisma = getPrismaClient();
-  const conversation = await prisma.conversation.findMany({
-    where: {
-      userId,
-    },
-  });
-  return conversation;
+  const [conversations, total] = await Promise.all([
+    prisma.conversation.findMany({
+      where: { userId },
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
+      skip: offset,
+    }),
+    prisma.conversation.count({ where: { userId } }),
+  ]);
+  return { conversations, total, hasMore: offset + limit < total };
 }
 
 export async function deleteConversation(conversationId: string, userId: string) {

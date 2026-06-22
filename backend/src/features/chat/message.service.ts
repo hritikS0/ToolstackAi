@@ -1,6 +1,14 @@
 import { getPrismaClient } from "../../shared/db/prismaClient.js";
 import { getSignedUrl } from "../../services/storage.service.js";
 
+export async function touchConversation(conversationId: string) {
+  const prisma = getPrismaClient();
+  await prisma.conversation.update({
+    where: { id: conversationId },
+    data: { updatedAt: new Date() },
+  }).catch(() => {});
+}
+
 export async function createMessageService(
   message: string,
   conversationId: string,
@@ -19,6 +27,7 @@ export async function createMessageService(
       role: role,
     },
   });
+  touchConversation(messages.conversationId);
   return messages;
 }
 export async function getMessageService(conversationId: string) {

@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import {
-  MessageSquare, FileText, Image, Bug, History, Settings,
+  MessageSquare, FileText, History, Settings,
   PanelLeftClose, PanelLeft, Palette, BrainCircuit, Images,
-  ChevronDown, ChevronRight, Plus, Trophy, CheckSquare, Flame, StickyNote, FolderOpen
+  ChevronDown, ChevronRight, Plus, Trophy, CheckSquare, Flame, StickyNote, FolderOpen,
+  Pin, Trash2, Loader2, MoreHorizontal
 } from 'lucide-react'
 import { chatService } from '@/services/chat.service'
+import { Dialog } from '@/components/ui/dialog'
 import type { Conversation } from '@/types/api'
 
 const navItems = [
@@ -31,39 +33,76 @@ export function Sidebar({ collapsed, onToggle, onThemeClick }: { collapsed: bool
 
   const [chatExpanded, setChatExpanded] = useState(true)
   const [pdfExpanded, setPdfExpanded] = useState(true)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [contextMenuId, setContextMenuId] = useState<string | null>(null)
 
   const currentPath = '/' + location.pathname.split('/').filter(Boolean)[0]
   const activeSubId = location.pathname.split('/')[2]
 
-  const { data: conversations = [] } = useQuery({
-    queryKey: ['conversations'],
-    queryFn: async () => (await chatService.getConversations()).data || [],
+  const PAGE_SIZE = 20
+
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+    queryKey: ['conversations', 'sidebar'],
+    queryFn: async ({ pageParam = 0 }) => {
+      const res = await chatService.getConversations(PAGE_SIZE, pageParam as number)
+      return res
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      if (!lastPage.hasMore) return undefined
+      return allPages.reduce((sum, p) => sum + (p.data?.length || 0), 0)
+    },
+    initialPageParam: 0,
   })
 
-  const chatConversations = (conversations as Conversation[])
+  const allConversations = (data?.pages.flatMap(p => p.data || []) || []) as Conversation[]
+
+  const chatConversations = allConversations
     .filter(c => c.type === 'chat' || !c.type)
     .sort((a, b) => {
+      const aPinned = a.settings?.pinned ? 1 : 0
+      const bPinned = b.settings?.pinned ? 1 : 0
+      if (aPinned !== bPinned) return bPinned - aPinned
       const aWelcome = a.settings?.isWelcome ? 1 : 0
       const bWelcome = b.settings?.isWelcome ? 1 : 0
-      return bWelcome - aWelcome
+      if (aWelcome !== bWelcome) return bWelcome - aWelcome
+      return new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
     })
-  const pdfConversations = (conversations as Conversation[]).filter(c => c.type === 'pdf')
+  const pdfConversations = (allConversations as Conversation[]).filter(c => c.type === 'pdf')
 
   const handleNewChat = async (e: React.MouseEvent) => {
     e.stopPropagation()
     try {
       const res = await chatService.createConversation()
       if (res.success) {
-        queryClient.invalidateQueries({ queryKey: ['conversations'] })
+        queryClient.invalidateQueries({ queryKey: ['conversations'], exact: false })
         navigate(`/chat/${res.data.conversation.id}`)
       }
-    } catch {}
+    } catch { /* navigation handled by router */ }
   }
 
   const handleNewPdf = (e: React.MouseEvent) => {
     e.stopPropagation()
     navigate('/pdf?upload=true')
   }
+
+  const pinMutation = useMutation({
+    mutationFn: ({ id, pinned }: { id: string; pinned: boolean }) => {
+      return chatService.updateConversation(id, { settings: { pinned } })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'], exact: false })
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => chatService.deleteConversation(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'], exact: false })
+      queryClient.invalidateQueries({ queryKey: ['messages'] })
+      if (activeSubId === deleteTarget) navigate('/chat')
+      setDeleteTarget(null)
+    },
+  })
 
   return (
     <div className={cn(
@@ -140,27 +179,100 @@ export function Sidebar({ collapsed, onToggle, onThemeClick }: { collapsed: bool
 
               {chatExpanded && (
                 <div className="pl-4 space-y-0.5 border-l border-base-850/60 ml-3.5 mt-0.5">
-                  {chatConversations.slice(0, 15).map(c => {
+                  {chatConversations.map(c => {
                     const active = activeSubId === c.id
+                    const isPinned = !!c.settings?.pinned
+                    const menuOpen = contextMenuId === c.id
                     return (
-                      <button
-                        type="button"
-                        key={c.id}
-                        onClick={() => navigate(`/chat/${c.id}`)}
-                        className={cn(
-                          "w-full text-left truncate px-2 py-1 rounded text-[12px] font-mono transition-all block",
-                          active 
-                            ? "bg-accent-muted text-accent font-medium" 
-                            : "text-base-400 hover:text-base-200 hover:bg-base-800/40"
+                      <div key={c.id} className="relative">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/chat/${c.id}`)}
+                          className={cn(
+                            "w-full text-left truncate px-3 py-1.5 rounded text-[12px] font-mono flex items-center gap-1.5 group",
+                            active
+                              ? "bg-accent-muted text-accent font-medium"
+                              : cn(
+                                  "text-base-400 hover:text-base-200 hover:bg-base-800/30",
+                                  isPinned && !active && "text-base-300 bg-accent-muted/10"
+                                )
+                          )}
+                          title={c.title || 'Conversation'}
+                        >
+                          <Pin className={cn(
+                            "size-2.5 shrink-0 text-accent/50 transition-opacity",
+                            isPinned ? "opacity-100" : "invisible"
+                          )} />
+                          <span className="truncate flex-1">{c.title || 'Conversation'}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              e.preventDefault()
+                              setContextMenuId(menuOpen ? null : c.id)
+                            }}
+                            className={cn(
+                              "size-5 rounded flex items-center justify-center transition-all shrink-0",
+                              "opacity-0 group-hover:opacity-100",
+                              menuOpen
+                                ? "opacity-100 bg-base-700 text-base-300"
+                                : "text-base-600 hover:text-base-300 hover:bg-base-700"
+                            )}
+                            title="Actions"
+                          >
+                            <MoreHorizontal className="size-3" />
+                          </button>
+                        </button>
+                        {menuOpen && (
+                          <>
+                            <div className="fixed inset-0 z-10" onClick={() => setContextMenuId(null)} />
+                            <div className="absolute right-0 top-full mt-0.5 z-20 bg-surface border border-base-800 rounded-[4px] py-0.5 shadow-lg min-w-[100px] font-mono text-[11px]">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  pinMutation.mutate({ id: c.id, pinned: !isPinned })
+                                  setContextMenuId(null)
+                                }}
+                                className="w-full text-left px-2.5 py-1.5 hover:bg-base-800/50 text-base-300 flex items-center gap-1.5"
+                              >
+                                <Pin className="size-3" />
+                                {isPinned ? 'Unpin' : 'Pin'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setDeleteTarget(c.id)
+                                  setContextMenuId(null)
+                                }}
+                                className="w-full text-left px-2.5 py-1.5 hover:bg-base-800/50 text-red-400 flex items-center gap-1.5"
+                              >
+                                <Trash2 className="size-3" />
+                                Delete
+                              </button>
+                            </div>
+                          </>
                         )}
-                        title={c.title || 'Conversation'}
-                      >
-                        • {c.title || 'Conversation'}
-                      </button>
+                      </div>
                     )
                   })}
                   {chatConversations.length === 0 && (
-                    <span className="text-[10px] text-base-600 italic px-2 block font-mono">No recent chats</span>
+                    <span className="text-[10px] text-base-600 italic px-3 block font-mono">No recent chats</span>
+                  )}
+                  {hasNextPage && (
+                    <button
+                      type="button"
+                      onClick={() => fetchNextPage()}
+                      disabled={isFetchingNextPage}
+                      className="w-full text-left px-3 py-1.5 rounded text-[11px] font-mono text-base-500 hover:text-base-300 hover:bg-base-800/40 transition-colors disabled:opacity-40"
+                    >
+                      {isFetchingNextPage ? (
+                        <span className="flex items-center gap-1"><Loader2 className="size-2.5 animate-spin" /> Loading...</span>
+                      ) : (
+                        'Load more...'
+                      )}
+                    </button>
                   )}
                 </div>
               )}
@@ -208,7 +320,7 @@ export function Sidebar({ collapsed, onToggle, onThemeClick }: { collapsed: bool
 
               {pdfExpanded && (
                 <div className="pl-4 space-y-0.5 border-l border-base-850/60 ml-3.5 mt-0.5">
-                  {pdfConversations.slice(0, 15).map(c => {
+                  {pdfConversations.map(c => {
                     const active = activeSubId === c.id
                     return (
                       <button
@@ -325,6 +437,16 @@ export function Sidebar({ collapsed, onToggle, onThemeClick }: { collapsed: bool
           )}
         </button>
       </div>
+
+      <Dialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => { if (deleteTarget) deleteMutation.mutate(deleteTarget) }}
+        title="Delete conversation"
+        message="This will permanently delete the conversation and all its messages."
+        confirmLabel="Delete"
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   )
 }

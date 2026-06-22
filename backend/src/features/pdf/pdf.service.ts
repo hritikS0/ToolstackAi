@@ -274,6 +274,10 @@ export async function answerPdfQuestion(
           completedAt: new Date(),
         },
       }),
+      prisma.conversation.update({
+        where: { id: documentId },
+        data: { updatedAt: new Date() },
+      }),
     ]);
 
     return { answer };

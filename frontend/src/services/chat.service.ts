@@ -8,8 +8,12 @@ interface VisionResponse {
 }
 
 export const chatService = {
-  async getConversations() {
-    const res = await apiClient.get<{ success: boolean; data: Conversation[] }>('/chat/conversations')
+  async getConversations(limit?: number, offset?: number) {
+    const params = new URLSearchParams()
+    if (limit !== undefined) params.set('limit', String(limit))
+    if (offset !== undefined) params.set('offset', String(offset))
+    const query = params.toString() ? `?${params.toString()}` : ''
+    const res = await apiClient.get<{ success: boolean; data: Conversation[]; total: number; hasMore: boolean }>(`/chat/conversations${query}`)
     return res.data
   },
   async createConversation(data?: { title?: string }) {

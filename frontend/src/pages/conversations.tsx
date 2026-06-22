@@ -22,7 +22,7 @@ export function ConversationsPage() {
 
   const { data: conversations = [], isLoading } = useQuery({
     queryKey: ['conversations'],
-    queryFn: async () => (await chatService.getConversations()).data || [],
+    queryFn: async () => (await chatService.getConversations(100, 0)).data || [],
   })
 
   const deleteMutation = useMutation({

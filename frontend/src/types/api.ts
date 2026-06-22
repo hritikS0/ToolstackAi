@@ -34,6 +34,7 @@ export interface Conversation {
   userId: string
   settings?: any
   createdAt: string
+  updatedAt: string
 }
 
 export interface Message {

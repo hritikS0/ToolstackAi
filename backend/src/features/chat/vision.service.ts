@@ -91,6 +91,10 @@ export async function visionChat(
         completedAt: new Date(),
       },
     }),
+    prisma.conversation.update({
+      where: { id: conversationId },
+      data: { updatedAt: new Date() },
+    }),
   ]);
 
   const memorySaved = await autoExtractMemories(message, userId).catch(() => 0);
