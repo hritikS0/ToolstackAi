@@ -3,6 +3,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from '@/store/auth'
 import { ThemeProvider } from '@/store/theme'
+import { ToastProvider } from '@/components/ui/toast'
 import { AppRoutes } from '@/routes'
 import { config } from '@/config'
 
@@ -18,7 +19,9 @@ function App() {
       <BrowserRouter>
         <AuthProvider>
           <ThemeProvider>
-            <AppRoutes />
+            <ToastProvider>
+              <AppRoutes />
+            </ToastProvider>
           </ThemeProvider>
         </AuthProvider>
       </BrowserRouter>

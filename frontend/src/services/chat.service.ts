@@ -23,6 +23,10 @@ export const chatService = {
   async deleteConversation(id: string) {
     await apiClient.delete(`/chat/conversations/${id}`)
   },
+  async deleteAllConversations() {
+    const res = await apiClient.delete<{ success: boolean; message: string; deleted: number }>('/chat/conversations')
+    return res.data
+  },
   async updateConversation(id: string, data: { title?: string; settings?: any }) {
     const res = await apiClient.patch<{ success: boolean; data: Conversation }>(`/chat/conversations/${id}`, data)
     return res.data

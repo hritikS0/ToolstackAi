@@ -47,6 +47,27 @@ export async function deleteConversation(conversationId: string, userId: string)
   deletePdfFromStorage(conversationId).catch(() => { });
 }
 
+export async function deleteAllConversations(userId: string) {
+  const prisma = getPrismaClient();
+  const conversations = await prisma.conversation.findMany({
+    where: { userId },
+    select: { id: true, type: true },
+  });
+
+  const conversationIds = conversations.map(c => c.id);
+  if (conversationIds.length === 0) return 0;
+
+  await prisma.message.deleteMany({ where: { conversationId: { in: conversationIds } } });
+  const result = await prisma.conversation.deleteMany({ where: { userId } });
+
+  for (const c of conversations) {
+    deleteMediaByConversation(c.id).catch(() => { });
+    deletePdfFromStorage(c.id).catch(() => { });
+  }
+
+  return result.count;
+}
+
 export async function updateConversation(conversationId: string, userId: string, data: { title?: string; settings?: any }) {
   const prisma = getPrismaClient();
   const conv = await prisma.conversation.findUnique({ where: { id: conversationId } });

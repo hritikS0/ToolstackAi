@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { conversationSchema } from "./conversation.validator.js";
-import { conversationService, getConversations as getConversationsService, deleteConversation as deleteConversationService, updateConversation as updateConversationService } from "./conversation.service.js";
+import { conversationService, getConversations as getConversationsService, deleteConversation as deleteConversationService, deleteAllConversations as deleteAllConversationsService, updateConversation as updateConversationService } from "./conversation.service.js";
 
 export async function createConversation(
   req: Request,
@@ -46,6 +46,21 @@ export async function deleteConversation(
     const id = req.params.id as string;
     await deleteConversationService(id, userId);
     res.status(200).json({ success: true, message: "Deleted" });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteAllConversations(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+    const count = await deleteAllConversationsService(userId);
+    res.status(200).json({ success: true, message: `Deleted ${count} conversations`, deleted: count });
   } catch (error) {
     next(error);
   }

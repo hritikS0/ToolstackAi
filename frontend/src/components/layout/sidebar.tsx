@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { chatService } from '@/services/chat.service'
 import { Dialog } from '@/components/ui/dialog'
+import { useToast } from '@/components/ui/toast'
 import type { Conversation } from '@/types/api'
 
 const navItems = [
@@ -35,6 +36,7 @@ export function Sidebar({ collapsed, onToggle, onThemeClick }: { collapsed: bool
   const [pdfExpanded, setPdfExpanded] = useState(true)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [contextMenuId, setContextMenuId] = useState<string | null>(null)
+  const { addToast } = useToast()
 
   const currentPath = '/' + location.pathname.split('/').filter(Boolean)[0]
   const activeSubId = location.pathname.split('/')[2]
@@ -89,8 +91,9 @@ export function Sidebar({ collapsed, onToggle, onThemeClick }: { collapsed: bool
     mutationFn: ({ id, pinned }: { id: string; pinned: boolean }) => {
       return chatService.updateConversation(id, { settings: { pinned } })
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['conversations'], exact: false })
+      addToast(variables.pinned ? 'Chat pinned' : 'Chat unpinned')
     },
   })
 

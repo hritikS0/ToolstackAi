@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Dialog } from '@/components/ui/dialog'
 import { TableSkeleton } from '@/components/ui/skeleton'
 import { formatRelativeTime, truncate } from '@/lib/utils'
-import { Search, MessageSquare, Trash2, Pencil, Check, X, Loader2, Calendar, ArrowUpDown, AlertTriangle, Terminal } from 'lucide-react'
+import { Search, MessageSquare, Trash2, Pencil, Check, X, Loader2, Calendar, ArrowUpDown, AlertTriangle, Terminal, Trash } from 'lucide-react'
 
 export function ConversationsPage() {
   const navigate = useNavigate()
@@ -18,6 +18,7 @@ export function ConversationsPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [showDeleteAll, setShowDeleteAll] = useState(false)
   const pendingNav = useRef<{ id: string; timer: ReturnType<typeof setTimeout> } | null>(null)
 
   const { data: conversations = [], isLoading } = useQuery({
@@ -30,6 +31,15 @@ export function ConversationsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
       queryClient.invalidateQueries({ queryKey: ['messages'] })
+    },
+  })
+
+  const deleteAllMutation = useMutation({
+    mutationFn: () => chatService.deleteAllConversations(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      queryClient.invalidateQueries({ queryKey: ['messages'] })
+      setShowDeleteAll(false)
     },
   })
 
@@ -93,6 +103,12 @@ export function ConversationsPage() {
               <ArrowUpDown className="size-3.5" /> Name
             </Button>
           </div>
+          <div className="flex-1" />
+          {filtered.length > 0 && (
+            <Button variant="ghost" size="sm" onClick={() => setShowDeleteAll(true)} className="gap-1 text-[11px] text-red-400 hover:text-red-300">
+              <Trash className="size-3.5" /> Delete All
+            </Button>
+          )}
         </div>
 
         {isLoading ? <TableSkeleton rows={6} /> : filtered.length === 0 ? (
@@ -159,6 +175,16 @@ export function ConversationsPage() {
         message="This will permanently delete the conversation and all its messages."
         confirmLabel="Delete"
         isLoading={deleteMutation.isPending}
+        icon={<AlertTriangle className="size-5 text-red-400" />}
+      />
+      <Dialog
+        open={showDeleteAll}
+        onClose={() => setShowDeleteAll(false)}
+        onConfirm={() => deleteAllMutation.mutate()}
+        title="Delete all conversations"
+        message={`This will permanently delete all ${filtered.length} conversations and their messages. This action cannot be undone.`}
+        confirmLabel="Delete All"
+        isLoading={deleteAllMutation.isPending}
         icon={<AlertTriangle className="size-5 text-red-400" />}
       />
     </div>
