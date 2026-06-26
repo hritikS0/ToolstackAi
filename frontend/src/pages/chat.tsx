@@ -66,6 +66,7 @@ export function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef('')
   const rafRef = useRef<number | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   const [isThinking, setIsThinking] = useState(false)
   const [thinkingMessage, setThinkingMessage] = useState(THINKING_MESSAGES[0])
@@ -193,6 +194,9 @@ export function ChatPage() {
       timerId: null,
     }
 
+    const controller = new AbortController()
+    abortRef.current = controller
+
     if (attachedImage) {
       const imgPreview = attachedImage.preview
       console.log('[chat] optimistic user msg (image)', msg)
@@ -249,19 +253,26 @@ export function ChatPage() {
         (sources: { title: string; url: string; description?: string }[]) => {
           console.log('[chat] stream sources', sources)
           setStreamingSources(sources)
-        }
+        },
+        controller.signal,
       )
       console.log('[chat] stream end', { contentLength: fullContent.length })
     } catch (err) {
       failed = true
-      console.log('[chat] stream error', err)
-      const errMsg = typeof err === 'object' && err !== null && 'response' in err
-        ? String((err as any).response?.data?.message || (err as any).message || 'Connection failed.')
-        : err instanceof Error ? err.message : 'Connection failed.'
-      setStreamError(errMsg)
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        console.log('[chat] stream stopped by user')
+        setStreamError(null)
+      } else {
+        console.log('[chat] stream error', err)
+        const errMsg = typeof err === 'object' && err !== null && 'response' in err
+          ? String((err as any).response?.data?.message || (err as any).message || 'Connection failed.')
+          : err instanceof Error ? err.message : 'Connection failed.'
+        setStreamError(errMsg)
+      }
     } finally {
       console.log('[chat] stream complete', { failed, hasContent: !!fullContent })
       setIsStreaming(false)
+      abortRef.current = null
       if (thinkingRef.current.timerId) clearTimeout(thinkingRef.current.timerId)
       thinkingRef.current.active = false
       setIsThinking(false)
@@ -277,6 +288,13 @@ export function ChatPage() {
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
     }
   }
+
+  const handleStop = useCallback(() => {
+    if (abortRef.current) {
+      abortRef.current.abort()
+      abortRef.current = null
+    }
+  }, [])
 
   const handleAttachImage = () => {
     fileRef.current?.click()
@@ -560,6 +578,7 @@ export function ChatPage() {
             value={input}
             onChange={setInput}
             onSend={handleSend}
+            onStop={handleStop}
             disabled={isStreaming}
             placeholder={isStreaming ? 'Waiting for response...' : 'Type a message...'}
             attachedImage={attachedImage || undefined}

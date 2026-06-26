@@ -1,11 +1,12 @@
 import { useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Send, Loader2, ImagePlus, X } from 'lucide-react'
+import { Send, Loader2, ImagePlus, X, Square } from 'lucide-react'
 
 interface ComposerProps {
   value: string
   onChange: (value: string) => void
   onSend: () => void
+  onStop?: () => void
   disabled?: boolean
   placeholder?: string
   attachedImage?: { file: File; preview: string }
@@ -13,13 +14,17 @@ interface ComposerProps {
   onRemoveImage?: () => void
 }
 
-export function Composer({ value, onChange, onSend, disabled, placeholder, attachedImage, onAttachImage, onRemoveImage }: ComposerProps) {
+export function Composer({ value, onChange, onSend, onStop, disabled, placeholder, attachedImage, onAttachImage, onRemoveImage }: ComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       onSend()
+    }
+    if (e.key === 'Escape' && disabled && onStop) {
+      e.preventDefault()
+      onStop()
     }
   }
 
@@ -72,9 +77,20 @@ export function Composer({ value, onChange, onSend, disabled, placeholder, attac
                 <ImagePlus className="size-3.5" />
               </button>
             )}
-            <Button variant="primary" size="icon" onClick={onSend} disabled={(!value.trim() && !attachedImage) || disabled} className="shrink-0 size-7">
-              {disabled ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
-            </Button>
+            {disabled && onStop ? (
+              <button
+                type="button"
+                onClick={onStop}
+                className="size-7 rounded-[4px] flex items-center justify-center bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+                title="Stop generating"
+              >
+                <Square className="size-3" />
+              </button>
+            ) : (
+              <Button variant="primary" size="icon" onClick={onSend} disabled={(!value.trim() && !attachedImage) || disabled} className="shrink-0 size-7">
+                {disabled ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
+              </Button>
+            )}
           </div>
         </div>
       </div>

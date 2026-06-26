@@ -51,6 +51,7 @@ export const chatService = {
     onChunk: (chunk: string) => void,
     onMemory?: (saved: number) => void,
     onSources?: (sources: { title: string; url: string; description?: string }[]) => void,
+    signal?: AbortSignal,
   ): Promise<void> {
     const token = localStorage.getItem(config.auth.tokenKey)
     const response = await fetch(`${config.api.baseUrl}/chat/stream`, {
@@ -60,6 +61,7 @@ export const chatService = {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(data),
+      signal,
     })
 
     const reader = response.body!.getReader()
