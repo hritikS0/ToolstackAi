@@ -148,9 +148,11 @@ async function recalculateProgress(goalId: string) {
 }
 
 export async function addMilestone(
+  userId: string,
   goalId: string,
   data: { title: string; description?: string; order?: number },
 ) {
+  await verifyGoalOwnership(goalId, userId);
   const prisma = getPrismaClient();
   const milestone = await prisma.milestone.create({
     data: {

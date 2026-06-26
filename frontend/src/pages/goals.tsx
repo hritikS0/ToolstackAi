@@ -129,10 +129,16 @@ export function GoalsPage() {
   const addMilestoneMutation = useMutation({
     mutationFn: ({ goalId, data }: { goalId: string; data: { title: string } }) =>
       goalsService.addMilestone(goalId, data),
-    onSuccess: () => {
+    onSuccess: (res) => {
       invalidateGoals()
       setShowAddMilestone(false)
       setNewMilestoneTitle('')
+      if (selectedGoal && res.data) {
+        const updated = [...(selectedGoal.milestones || []), res.data]
+        const completed = updated.filter(m => m.status === 'completed').length
+        const progress = updated.length > 0 ? Math.round((completed / updated.length) * 100) : 0
+        setSelectedGoal({ ...selectedGoal, milestones: updated, progress })
+      }
     },
   })
 

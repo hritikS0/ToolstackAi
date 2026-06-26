@@ -118,7 +118,7 @@ export async function addMilestone(
       return res.status(401).json({ success: false, message: "Unauthorized" });
     const goalId = req.params.id as string;
     const data = createMilestoneSchema.parse(req.body);
-    const milestone = await addMilestoneService(goalId, data);
+    const milestone = await addMilestoneService(userId, goalId, data);
     res.status(201).json({ success: true, data: milestone });
   } catch (error) {
     next(error);
