@@ -20,6 +20,7 @@ const TasksPage = lazy(() => import('@/pages/tasks').then(m => ({ default: m.Tas
 const HabitsPage = lazy(() => import('@/pages/habits').then(m => ({ default: m.HabitsPage })))
 const NotesPage = lazy(() => import('@/pages/notes').then(m => ({ default: m.NotesPage })))
 const ProjectsPage = lazy(() => import('@/pages/projects').then(m => ({ default: m.ProjectsPage })))
+const PomodoroPage = lazy(() => import('@/pages/pomodoro').then(m => ({ default: m.PomodoroPage })))
 
 export function AppRoutes() {
   return (
@@ -50,6 +51,7 @@ export function AppRoutes() {
           <Route path="/tasks" element={<TasksPage />} />
           <Route path="/habits" element={<HabitsPage />} />
           <Route path="/notes" element={<NotesPage />} />
+          <Route path="/pomodoro" element={<PomodoroPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
