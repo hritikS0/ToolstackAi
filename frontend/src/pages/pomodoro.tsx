@@ -1,200 +1,18 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
 import { Timer, Play, Pause, RotateCcw, SkipForward, CheckCircle2, Music, ExternalLink, Pencil, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-
-type Mode = 'focus' | 'shortBreak' | 'longBreak'
-
-interface ModeConfig {
-  label: string
-  duration: number
-}
-
-const MODES: Record<Mode, ModeConfig> = {
-  focus: { label: 'Focus', duration: 25 },
-  shortBreak: { label: 'Short Break', duration: 5 },
-  longBreak: { label: 'Long Break', duration: 15 },
-}
-
-const PRESETS = [
-  { id: 'X4VbdwhkE10', label: 'Lofi Girl' },
-  { id: '5qap5aO4i9A', label: 'Chill Beats' },
-  { id: 'DWcJFNfaw9c', label: 'Study Radio' },
-]
-
-function extractVideoId(input: string): string | null {
-  const trimmed = input.trim()
-  if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) return trimmed
-  try {
-    const url = new URL(trimmed)
-    if (url.hostname.includes('youtube.com') || url.hostname === 'youtu.be') {
-      if (url.pathname.startsWith('/live/') || url.pathname.startsWith('/watch')) {
-        if (url.pathname.startsWith('/live/')) return url.pathname.split('/')[2] || null
-        return url.searchParams.get('v')
-      }
-      if (url.hostname === 'youtu.be') return url.pathname.slice(1)
-    }
-  } catch { /* invalid URL */ }
-  return null
-}
-
-const RING_RADIUS = 160
-const STROKE_WIDTH = 8
-const CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS
-const SVG_SIZE = (RING_RADIUS + STROKE_WIDTH) * 2
-
-const ringColor: Record<Mode, string> = {
-  focus: 'stroke-orange-400',
-  shortBreak: 'stroke-emerald-400',
-  longBreak: 'stroke-blue-400',
-}
-
-function formatTime(seconds: number): string {
-  const m = Math.floor(seconds / 60)
-  const s = seconds % 60
-  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-}
-
-function playBeep() {
-  try {
-    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-    osc.frequency.value = 880
-    osc.type = 'sine'
-    gain.gain.setValueAtTime(0.3, ctx.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
-    osc.start(ctx.currentTime)
-    osc.stop(ctx.currentTime + 0.4)
-  } catch { /* audio not supported */ }
-}
+import { usePomodoro, MODES, PRESETS, RING_RADIUS, STROKE_WIDTH, CIRCUMFERENCE, SVG_SIZE, ringColor, formatTime, type Mode } from '@/store/pomodoro'
 
 export function PomodoroPage() {
-  const [mode, setMode] = useState<Mode>('focus')
-  const [timeLeft, setTimeLeft] = useState(MODES.focus.duration * 60)
-  const [isRunning, setIsRunning] = useState(false)
-  const [sessionCount, setSessionCount] = useState(0)
-  const [showMusic, setShowMusic] = useState(false)
-  const [videoId, setVideoId] = useState('X4VbdwhkE10')
-  const [videoInput, setVideoInput] = useState('')
-  const [showInput, setShowInput] = useState(false)
-  const [iframeKey, setIframeKey] = useState(0)
+  const {
+    mode, timeLeft, isRunning, sessionCount,
+    showMusic, setShowMusic,
+    videoId, videoInput, showVideoInput,
+    totalSeconds, progress,
+    handleModeChange, handleSkip, handleReset, toggleRunning,
+    handleSelectPreset, handleVideoUrlInput, handleApplyVideo, handleInputKeyDown,
+    setVideoInput,
+  } = usePomodoro()
 
-  const modeRef = useRef(mode)
-  const sessionCountRef = useRef(sessionCount)
-  const completedRef = useRef(false)
-
-  useEffect(() => { modeRef.current = mode }, [mode])
-  useEffect(() => { sessionCountRef.current = sessionCount }, [sessionCount])
-
-  useEffect(() => {
-    if (!isRunning) return
-    completedRef.current = false
-
-    const id = setInterval(() => {
-      setTimeLeft(prev => Math.max(0, prev - 1))
-    }, 1000)
-
-    return () => clearInterval(id)
-  }, [isRunning])
-
-  useEffect(() => {
-    if (timeLeft !== 0) return
-    if (completedRef.current) return
-    completedRef.current = true
-
-    playBeep()
-    setIsRunning(false)
-
-    const currentMode = modeRef.current
-    const currentCount = sessionCountRef.current
-
-    if (currentMode === 'focus') {
-      const newCount = currentCount + 1
-      setSessionCount(newCount)
-      if (newCount % 4 === 0) {
-        setMode('longBreak')
-        setTimeLeft(MODES.longBreak.duration * 60)
-      } else {
-        setMode('shortBreak')
-        setTimeLeft(MODES.shortBreak.duration * 60)
-      }
-    } else {
-      setMode('focus')
-      setTimeLeft(MODES.focus.duration * 60)
-    }
-  }, [timeLeft])
-
-  const handleModeChange = useCallback((newMode: Mode) => {
-    setIsRunning(false)
-    setMode(newMode)
-    setTimeLeft(MODES[newMode].duration * 60)
-  }, [])
-
-  const handleApplyVideo = useCallback(() => {
-    const id = extractVideoId(videoInput)
-    if (id) {
-      setVideoId(id)
-      setIframeKey(k => k + 1)
-      setVideoInput('')
-      setShowInput(false)
-    }
-  }, [videoInput])
-
-  const handleSelectPreset = useCallback((id: string) => {
-    if (id === videoId) {
-      setIframeKey(k => k + 1)
-    } else {
-      setVideoId(id)
-      setIframeKey(k => k + 1)
-    }
-  }, [videoId])
-
-  const handleVideoUrlInput = useCallback(() => {
-    setVideoInput(videoId)
-    setShowInput(true)
-  }, [videoId])
-
-  const handleInputKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      const id = extractVideoId(videoInput)
-      if (id) {
-        setVideoId(id)
-        setIframeKey(k => k + 1)
-        setVideoInput('')
-        setShowInput(false)
-      }
-    }
-    if (e.key === 'Escape') {
-      setShowInput(false)
-      setVideoInput('')
-    }
-  }, [videoInput])
-
-  const handleSkip = useCallback(() => {
-    setIsRunning(false)
-    const currentMode = modeRef.current
-    const currentCount = sessionCountRef.current
-
-    if (currentMode === 'focus') {
-      const newCount = currentCount + 1
-      setSessionCount(newCount)
-      if (newCount % 4 === 0) {
-        setMode('longBreak')
-        setTimeLeft(MODES.longBreak.duration * 60)
-      } else {
-        setMode('shortBreak')
-        setTimeLeft(MODES.shortBreak.duration * 60)
-      }
-    } else {
-      setMode('focus')
-      setTimeLeft(MODES.focus.duration * 60)
-    }
-  }, [])
-
-  const totalSeconds = MODES[mode].duration * 60
-  const progress = timeLeft / totalSeconds
   const strokeDashoffset = CIRCUMFERENCE * (1 - progress)
 
   return (
@@ -274,7 +92,7 @@ export function PomodoroPage() {
             <Button
               variant="primary"
               size="md"
-              onClick={() => setIsRunning(r => !r)}
+              onClick={toggleRunning}
               className="min-w-[130px] justify-center h-9 text-[12px]"
             >
               {isRunning ? (
@@ -283,7 +101,7 @@ export function PomodoroPage() {
                 <><Play className="size-4" /> Start</>
               )}
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => { setIsRunning(false); setTimeLeft(MODES[mode].duration * 60) }} title="Reset" className="size-9">
+            <Button variant="ghost" size="icon" onClick={handleReset} title="Reset" className="size-9">
               <RotateCcw className="size-4" />
             </Button>
             <Button variant="ghost" size="icon" onClick={handleSkip} title="Skip" className="size-9">
@@ -310,73 +128,66 @@ export function PomodoroPage() {
             </Button>
           </div>
           {showMusic && (
-            <div className="mt-3 rounded-[4px] overflow-hidden border border-base-700">
-              <iframe
-                key={iframeKey}
-                src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&mute=0`}
-                className="w-full aspect-video"
-                allow="autoplay; encrypted-media"
-                allowFullScreen
-                title="Study Music"
-              />
-              <div className="p-3 bg-surface border-t border-base-700 space-y-2">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[10px] text-base-600 font-mono tracking-wider mr-1">Presets:</span>
-                  {PRESETS.map(p => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => handleSelectPreset(p.id)}
-                      className={`px-2 py-0.5 rounded-[2px] text-[10px] font-mono transition-colors ${
-                        videoId === p.id
-                          ? 'bg-accent-muted text-accent'
-                          : 'text-base-500 hover:text-base-300 bg-base-900 hover:bg-base-800'
-                      }`}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-1.5">
-                  {showInput ? (
-                    <>
-                      <input
-                        type="text"
-                        value={videoInput}
-                        onChange={e => setVideoInput(e.target.value)}
-                        onKeyDown={handleInputKeyDown}
-                        placeholder="Video ID or URL..."
-                        className="flex-1 h-7 rounded-[2px] border border-base-700 bg-base-950 px-2 text-[10px] font-mono text-base-200 outline-none focus:border-accent/40"
-                        autoFocus
-                      />
-                      <button
-                        type="button"
-                        onClick={handleApplyVideo}
-                        className="size-7 rounded-[2px] flex items-center justify-center text-base-400 hover:text-accent hover:bg-base-800 transition-colors"
-                      >
-                        <Check className="size-3.5" />
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleVideoUrlInput}
-                      className="flex items-center gap-1 text-[10px] text-base-500 hover:text-base-300 font-mono transition-colors"
-                    >
-                      <Pencil className="size-2.5" />
-                      Custom URL
-                    </button>
-                  )}
-                  <div className="flex-1" />
-                  <a
-                    href={`https://www.youtube.com/live/${videoId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[10px] text-base-500 hover:text-base-300 font-mono transition-colors"
+            <div className="mt-3 rounded-[4px] border border-base-700 bg-surface p-3 space-y-2">
+              <span className="text-[10px] text-base-500 font-mono block">
+                Music playing in background. Use the widget to stop or open this page for full controls.
+              </span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] text-base-600 font-mono tracking-wider mr-1">Presets:</span>
+                {PRESETS.map(p => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => handleSelectPreset(p.id)}
+                    className={`px-2 py-0.5 rounded-[2px] text-[10px] font-mono transition-colors ${
+                      videoId === p.id
+                        ? 'bg-accent-muted text-accent'
+                        : 'text-base-500 hover:text-base-300 bg-base-900 hover:bg-base-800'
+                    }`}
                   >
-                    YouTube <ExternalLink className="size-2.5" />
-                  </a>
-                </div>
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-1.5">
+                {showVideoInput ? (
+                  <>
+                    <input
+                      type="text"
+                      value={videoInput}
+                      onChange={e => setVideoInput(e.target.value)}
+                      onKeyDown={handleInputKeyDown}
+                      placeholder="Video ID or URL..."
+                      className="flex-1 h-7 rounded-[2px] border border-base-700 bg-base-950 px-2 text-[10px] font-mono text-base-200 outline-none focus:border-accent/40"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyVideo}
+                      className="size-7 rounded-[2px] flex items-center justify-center text-base-400 hover:text-accent hover:bg-base-800 transition-colors"
+                    >
+                      <Check className="size-3.5" />
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleVideoUrlInput}
+                    className="flex items-center gap-1 text-[10px] text-base-500 hover:text-base-300 font-mono transition-colors"
+                  >
+                    <Pencil className="size-2.5" />
+                    Custom URL
+                  </button>
+                )}
+                <div className="flex-1" />
+                <a
+                  href={`https://www.youtube.com/live/${videoId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[10px] text-base-500 hover:text-base-300 font-mono transition-colors"
+                >
+                  YouTube <ExternalLink className="size-2.5" />
+                </a>
               </div>
             </div>
           )}
