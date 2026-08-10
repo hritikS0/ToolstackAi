@@ -26,24 +26,43 @@ async function extractPdfText(filePath: string): Promise<string> {
 export async function processPdfUpload(
   file: Express.Multer.File,
   userId: string,
+  conversationId?: string,
 ): Promise<{ documentId: string; name: string; chunks: number }> {
   const prisma = getPrismaClient();
 
   const extractedText = await extractPdfText(file.path);
 
-  const document = await prisma.conversation.create({
-    data: {
-      title: file.originalname.replace(/\.pdf$/i, ""),
-      type: "pdf",
-      userId,
-    },
-  });
+  let document: { id: string };
+
+  if (conversationId) {
+    const existing = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: { id: true, userId: true },
+    });
+    if (!existing || existing.userId !== userId) {
+      throw Object.assign(new Error("Conversation not found"), { statusCode: 404 });
+    }
+    await prisma.pdfEmbedding.deleteMany({ where: { conversationId: existing.id } });
+    document = existing;
+  } else {
+    document = await prisma.conversation.create({
+      data: {
+        title: file.originalname.replace(/\.pdf$/i, ""),
+        type: "chat",
+        userId,
+      },
+    });
+  }
 
   const upload = await uploadFileFromDisk(file.path, file.originalname, "application/pdf", userId, "pdfs");
 
   await prisma.conversation.update({
     where: { id: document.id },
-    data: { storagePath: upload.fullPath },
+    data: {
+      title: file.originalname.replace(/\.pdf$/i, ""),
+      type: "chat",
+      storagePath: upload.fullPath,
+    },
   });
 
   await prisma.storedFile.create({

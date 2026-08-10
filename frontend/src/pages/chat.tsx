@@ -6,10 +6,13 @@ import { Button } from '@/components/ui/button'
 import { Composer } from '@/components/chat/composer'
 import { MessageBlock } from '@/components/chat/message-block'
 import { formatRelativeTime, cn } from '@/lib/utils'
-import { MessageSquare, Plus, Loader2, AlertTriangle, BrainCircuit, Bug, Code, Lightbulb, Sparkles, Globe, KeyRound, Settings, ArrowRight } from 'lucide-react'
+import { MessageSquare, Plus, Loader2, AlertTriangle, BrainCircuit, Bug, Code, Lightbulb, Sparkles, Globe, KeyRound, Settings, ArrowRight, FileText, X } from 'lucide-react'
 import type { Message, Conversation } from '@/types/api'
 import { motion } from 'framer-motion'
 import { keysService } from '@/services/keys.service'
+import { pdfService } from '@/services/pdf.service'
+import apiClient from '@/api/client'
+import { config } from '@/config'
 
 const THINKING_MESSAGES = [
   'Thinking...',
@@ -52,11 +55,16 @@ export function ChatPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const fileRef = useRef<HTMLInputElement>(null)
+  const pdfFileRef = useRef<HTMLInputElement>(null)
   const [input, setInput] = useState('')
   const [streamingContent, setStreamingContent] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
   const [optimisticUserMsg, setOptimisticUserMsg] = useState<string | null>(null)
   const [streamError, setStreamError] = useState<string | null>(null)
+  const [pdfUploading, setPdfUploading] = useState(false)
+  const [pdfUploadError, setPdfUploadError] = useState<string | null>(null)
+  const [showPdfViewer, setShowPdfViewer] = useState(false)
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null)
   const [attachedImage, setAttachedImage] = useState<{ file: File; preview: string } | null>(null)
   const [localImagePreviews, setLocalImagePreviews] = useState<Record<string, string>>({})
   const localImagePreviewsRef = useRef(localImagePreviews)
@@ -120,6 +128,26 @@ export function ChatPage() {
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
   }, [])
+
+  const isDocument = id ? (conversations as Conversation[]).some(c => c.id === id && (!!c.storagePath || c.type === 'pdf')) : false
+
+  useEffect(() => {
+    if (!id) return
+    setShowPdfViewer(false)
+    setPdfUploadError(null)
+    if (!isDocument) { setPdfBlobUrl(null); return }
+    let cancelled = false
+    const token = localStorage.getItem(config.auth.tokenKey)
+    fetch(`${apiClient.defaults.baseURL}/pdf/${id}/file`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then(res => (res.ok ? res.blob() : null))
+      .then(blob => {
+        if (blob && !cancelled) setPdfBlobUrl(URL.createObjectURL(blob))
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [id, isDocument])
 
   useEffect(() => { scrollToBottom() }, [messages, streamingContent, optimisticUserMsg, isStreaming, scrollToBottom])
 
@@ -192,6 +220,34 @@ export function ChatPage() {
       minMs: 350 + Math.floor(Math.random() * 350),
       pendingContent: '',
       timerId: null,
+    }
+
+    const activeConv = (conversations as Conversation[]).find(c => c.id === convId)
+    const isDocChat = !!activeConv?.storagePath || activeConv?.type === 'pdf'
+
+    if (isDocChat) {
+      setOptimisticUserMsg(msg)
+      try {
+        const res = await pdfService.chat({ message: msg, documentId: convId })
+        if (res.success && res.data) {
+          setStreamingContent(res.data.answer)
+        }
+      } catch (err) {
+        const errMsg = typeof err === 'object' && err !== null && 'response' in err
+          ? String((err as any).response?.data?.message || (err as any).message || 'Failed to get response.')
+          : err instanceof Error ? err.message : 'Failed to get response.'
+        setStreamError(errMsg)
+      } finally {
+        setIsStreaming(false)
+        abortRef.current = null
+        if (thinkingRef.current.timerId) clearTimeout(thinkingRef.current.timerId)
+        thinkingRef.current.active = false
+        setIsThinking(false)
+        await queryClient.refetchQueries({ queryKey: ['messages', convId] })
+        setOptimisticUserMsg(null)
+        queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      }
+      return
     }
 
     const controller = new AbortController()
@@ -308,7 +364,40 @@ export function ChatPage() {
     e.target.value = ''
   }
 
+  const handleAttachPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setPdfUploadError(null)
+    setPdfUploading(true)
+    try {
+      let convId = id
+      if (!convId) {
+        const res = await chatService.createConversation()
+        if (res.data?.conversation) {
+          convId = res.data.conversation.id
+          navigate(`/chat/${convId}`, { replace: true })
+        }
+      }
+      if (!convId) return
+      await pdfService.uploadPdf(file, convId)
+      setShowPdfViewer(true)
+      queryClient.invalidateQueries({ queryKey: ['conversations'] })
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'PDF upload failed.'
+      setPdfUploadError(errMsg)
+    } finally {
+      setPdfUploading(false)
+    }
+  }
 
+
+
+  useEffect(() => {
+    return () => {
+      if (pdfBlobUrl) URL.revokeObjectURL(pdfBlobUrl)
+    }
+  }, [pdfBlobUrl])
 
   useEffect(() => {
     if (prevIdRef.current !== id) {
@@ -363,6 +452,7 @@ export function ChatPage() {
   return (
     <div className="flex h-full">
       <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFileChange} />
+      <input ref={pdfFileRef} type="file" accept=".pdf" className="hidden" onChange={handleAttachPdf} />
 
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
         {!id ? (
@@ -391,6 +481,23 @@ export function ChatPage() {
                   {currentConv?.title || 'Untitled Chat'}
                 </span>
               </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {isDocument && (
+                  <button
+                    type="button"
+                    onClick={() => setShowPdfViewer(v => !v)}
+                    className={cn(
+                      'flex items-center gap-1.5 h-7 px-2.5 rounded-[4px] border text-[11px] font-mono transition-all duration-200 cursor-pointer',
+                      showPdfViewer
+                        ? 'border-accent/40 bg-accent-muted text-accent font-semibold'
+                        : 'border-base-750 bg-base-900/60 text-base-400 hover:text-base-200 hover:border-base-700'
+                    )}
+                    title="Toggle document viewer"
+                  >
+                    <FileText className="size-3.5" />
+                    <span>DOC</span>
+                  </button>
+                )}
               <button
                 type="button"
                 disabled={toggleSearchMutation.isPending}
@@ -411,6 +518,7 @@ export function ChatPage() {
                 <Globe className={cn('size-3.5', webSearchEnabled && 'animate-pulse')} />
                 <span>WEB SEARCH: {webSearchEnabled ? 'ON' : 'OFF'}</span>
               </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto bg-workspace">
@@ -556,6 +664,54 @@ export function ChatPage() {
           </div>
         )}
 
+        {id && isDocument && (
+          <div className="shrink-0 border-t border-base-800 bg-surface/60 backdrop-blur-sm">
+            <div className="flex items-center gap-2 max-w-4xl mx-auto px-4 py-1.5">
+              <FileText className="size-3 text-accent shrink-0" />
+              <span className="flex-1 text-[11px] text-base-400 font-mono truncate">
+                {currentConv?.title || 'Document'}
+              </span>
+              {pdfUploading && (
+                <span className="flex items-center gap-1.5 text-[10px] text-base-500 font-mono">
+                  <Loader2 className="size-3 animate-spin" />
+                  Uploading...
+                </span>
+              )}
+              {pdfUploadError && (
+                <span className="text-[10px] text-red-400 font-mono truncate">{pdfUploadError}</span>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowPdfViewer(v => !v)}
+                className="text-[10px] font-mono text-base-500 hover:text-accent transition-colors flex items-center gap-1"
+              >
+                {showPdfViewer ? 'Hide' : 'View'}
+                <X className={cn('size-2.5 transition-transform', showPdfViewer && 'rotate-45')} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {id && showPdfViewer && pdfBlobUrl && (
+          <div className="shrink-0 flex flex-col border-t border-base-800 bg-surface h-[40%] min-h-[200px]">
+            <div className="flex items-center justify-between h-8 px-3 border-b border-base-800 shrink-0">
+              <span className="text-[11px] font-mono text-base-400 truncate flex items-center gap-1.5">
+                <FileText className="size-3 text-base-500" />
+                {currentConv?.title || 'Document'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowPdfViewer(false)}
+                className="size-6 rounded-[4px] flex items-center justify-center text-base-500 hover:text-base-300 hover:bg-base-800 transition-colors"
+                title="Close viewer"
+              >
+                <X className="size-3" />
+              </button>
+            </div>
+            <iframe src={pdfBlobUrl} className="flex-1 w-full border-0 bg-white" title="Document viewer" />
+          </div>
+        )}
+
         {id && !hasApiKeys ? (
           <div className="shrink-0 border-t border-base-800 bg-base-950/60 backdrop-blur-sm px-4 py-3">
             <div className="flex items-center justify-between gap-3 max-w-4xl mx-auto">
@@ -587,6 +743,8 @@ export function ChatPage() {
               if (attachedImage) URL.revokeObjectURL(attachedImage.preview)
               setAttachedImage(null)
             }}
+            onAttachPdf={() => pdfFileRef.current?.click()}
+            uploadingPdf={pdfUploading}
           />
         ) : null}
       </div>

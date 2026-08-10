@@ -17,7 +17,6 @@ import { keysService } from '@/services/keys.service'
 
 const quickActions = [
   { icon: MessageSquare, label: 'New Chat', path: '/chat', key: 'k1' },
-  { icon: FileText, label: 'Upload PDF', path: '/pdf', key: 'k2' },
   // { icon: Image, label: 'Image Analysis', path: '/image', key: 'k3' },
   // { icon: Bug, label: 'Code Debugger', path: '/debug', key: 'k4' },
 ]
@@ -516,10 +515,10 @@ export function DashboardPage() {
                       {d.recentConversations.map((c) => (
                         <button type="button"
                           key={c.id}
-                          onClick={() => navigate(c.type === 'pdf' ? `/pdf/${c.id}` : `/chat/${c.id}`)}
+                          onClick={() => navigate(`/chat/${c.id}`)}
                           className="flex items-center gap-2.5 w-full px-3 py-2 hover:bg-base-800/40 transition-colors text-left"
                         >
-                          {c.type === 'pdf' ? <FileText className="size-3.5 text-base-500 shrink-0" /> : <MessageSquare className="size-3.5 text-base-500 shrink-0" />}
+                          <MessageSquare className="size-3.5 text-base-500 shrink-0" />
                           <span className="flex-1 text-[14px] text-base-300 font-mono truncate">{truncate(c.title, 40)}</span>
                           <span className="text-[12px] text-base-600 font-mono shrink-0">{formatRelativeTime(c.createdAt)}</span>
                         </button>

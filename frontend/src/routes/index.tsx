@@ -8,7 +8,6 @@ const LoginPage = lazy(() => import('@/pages/login').then(m => ({ default: m.Log
 const RegisterPage = lazy(() => import('@/pages/register').then(m => ({ default: m.RegisterPage })))
 const DashboardPage = lazy(() => import('@/pages/dashboard').then(m => ({ default: m.DashboardPage })))
 const ChatPage = lazy(() => import('@/pages/chat').then(m => ({ default: m.ChatPage })))
-const PdfChatPage = lazy(() => import('@/pages/pdf-chat').then(m => ({ default: m.PdfChatPage })))
 // const ImageAnalyzerPage = lazy(() => import('@/pages/image-analyzer').then(m => ({ default: m.ImageAnalyzerPage })))
 // const CodeDebuggerPage = lazy(() => import('@/pages/code-debugger').then(m => ({ default: m.CodeDebuggerPage })))
 const ConversationsPage = lazy(() => import('@/pages/conversations').then(m => ({ default: m.ConversationsPage })))
@@ -39,8 +38,6 @@ export function AppRoutes() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/chat/:id" element={<ChatPage />} />
-          <Route path="/pdf" element={<PdfChatPage />} />
-          <Route path="/pdf/:id" element={<PdfChatPage />} />
           {/* <Route path="/image" element={<ImageAnalyzerPage />} /> */}
           {/* <Route path="/debug" element={<CodeDebuggerPage />} /> */}
           <Route path="/conversations" element={<ConversationsPage />} />

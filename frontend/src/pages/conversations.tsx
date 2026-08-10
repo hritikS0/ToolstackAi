@@ -76,7 +76,7 @@ export function ConversationsPage() {
         id,
         timer: setTimeout(() => {
           pendingNav.current = null
-          navigate(type === 'pdf' ? `/pdf/${id}` : `/chat/${id}`)
+          navigate(`/chat/${id}`)
         }, 250),
       }
     }

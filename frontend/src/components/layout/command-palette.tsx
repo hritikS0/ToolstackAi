@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, MessageSquare, FileText, Image, Bug, LayoutDashboard, History } from 'lucide-react'
+import { Search, MessageSquare, Bug, LayoutDashboard, History } from 'lucide-react'
 
 const commands = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   { icon: MessageSquare, label: 'AI Chat', path: '/chat' },
-  { icon: FileText, label: 'PDF Chat', path: '/pdf' },
   // { icon: Image, label: 'Image Analysis', path: '/image' },
   // { icon: Bug, label: 'Code Debugger', path: '/debug' },
   { icon: History, label: 'History', path: '/conversations' },

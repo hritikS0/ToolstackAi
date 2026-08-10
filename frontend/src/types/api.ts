@@ -32,6 +32,7 @@ export interface Conversation {
   title: string | null
   type?: string
   userId: string
+  storagePath?: string | null
   settings?: any
   createdAt: string
   updatedAt: string

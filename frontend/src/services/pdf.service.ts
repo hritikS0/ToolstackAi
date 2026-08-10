@@ -7,9 +7,10 @@ function getPdfFileUrl(documentId: string): string {
 }
 
 export const pdfService = {
-  async uploadPdf(file: File) {
+  async uploadPdf(file: File, conversationId?: string) {
     const form = new FormData()
     form.append('file', file)
+    if (conversationId) form.append('conversationId', conversationId)
     const res = await apiClient.post<{ success: boolean; data: PdfUploadResponse }>('/pdf/upload', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: config.uploads.pdfTimeout,

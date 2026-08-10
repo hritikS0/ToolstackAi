@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Send, Loader2, ImagePlus, X, Square } from 'lucide-react'
+import { Send, Loader2, ImagePlus, X, Square, FileText } from 'lucide-react'
 
 interface ComposerProps {
   value: string
@@ -12,9 +12,11 @@ interface ComposerProps {
   attachedImage?: { file: File; preview: string }
   onAttachImage?: () => void
   onRemoveImage?: () => void
+  onAttachPdf?: () => void
+  uploadingPdf?: boolean
 }
 
-export function Composer({ value, onChange, onSend, onStop, disabled, placeholder, attachedImage, onAttachImage, onRemoveImage }: ComposerProps) {
+export function Composer({ value, onChange, onSend, onStop, disabled, placeholder, attachedImage, onAttachImage, onRemoveImage, onAttachPdf, uploadingPdf }: ComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -68,6 +70,21 @@ export function Composer({ value, onChange, onSend, onStop, disabled, placeholde
             className="flex-1 bg-transparent text-[15px] text-base-100 placeholder:text-base-600 resize-none outline-none min-h-[24px] max-h-[200px] leading-relaxed font-mono disabled:opacity-40"
           />
           <div className="flex items-center gap-1 shrink-0">
+            {onAttachPdf && (
+              uploadingPdf ? (
+                <span className="size-7 rounded-[4px] flex items-center justify-center text-base-500">
+                  <Loader2 className="size-3.5 animate-spin" />
+                </span>
+              ) : (
+                <button type="button"
+                  onClick={onAttachPdf}
+                  className="size-7 rounded-[4px] flex items-center justify-center text-base-500 hover:text-base-300 hover:bg-base-800 transition-colors"
+                  title="Attach a PDF document"
+                >
+                  <FileText className="size-3.5" />
+                </button>
+              )
+            )}
             {onAttachImage && (
               <button type="button"
                 onClick={onAttachImage}
