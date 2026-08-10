@@ -30,6 +30,7 @@ model User {
   researchItems  ResearchItem[]
   collections    Collection[]
   automations    Automation[]
+  pomodoroSessions PomodoroSession[]
 }
 
 model Conversation {
@@ -289,6 +290,17 @@ model Automation {
 
   user    User     @relation(fields: [userId], references: [id])
   project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+}
+
+model PomodoroSession {
+  id              String   @id @default(cuid())
+  userId          String
+  mode            String   @default("focus")
+  startedAt       DateTime
+  completedAt     DateTime
+  durationSeconds Int
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Project {

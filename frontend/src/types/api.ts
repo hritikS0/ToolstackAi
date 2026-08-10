@@ -280,6 +280,24 @@ export interface Task {
   updatedAt: string
 }
 
+export interface PomodoroSession {
+  id: string
+  userId: string
+  mode: 'focus' | 'shortBreak' | 'longBreak'
+  startedAt: string
+  completedAt: string
+  durationSeconds: number
+  createdAt: string
+}
+
+export interface PomodoroStats {
+  totalSessions: number
+  totalFocusSeconds: number
+  todaySessions: number
+  todayFocusSeconds: number
+  last7Days: { date: string; focusSeconds: number }[]
+}
+
 export interface Project {
   id: string
   userId: string

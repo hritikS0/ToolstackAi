@@ -1,6 +1,8 @@
 import { createContext, useContext, useCallback, useMemo, useState, useEffect, useRef, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Timer, Music, Music2 } from 'lucide-react'
+import { pomodoroService } from '@/services/pomodoro.service'
+import type { PomodoroSession, PomodoroStats } from '@/types/api'
 
 export type Mode = 'focus' | 'shortBreak' | 'longBreak'
 
@@ -36,6 +38,13 @@ export function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60)
   const s = seconds % 60
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+}
+
+export function formatFocusTime(totalSeconds: number): string {
+  const h = Math.floor(totalSeconds / 3600)
+  const m = Math.floor((totalSeconds % 3600) / 60)
+  if (h > 0) return `${h}h ${m}m`
+  return `${m}m`
 }
 
 export function playBeep() {
@@ -82,6 +91,9 @@ interface PomodoroContextType {
   totalSeconds: number
   progress: number
   showMusic: boolean
+  sessions: PomodoroSession[]
+  stats: PomodoroStats | null
+  refreshSessions: () => void
   handleModeChange: (newMode: Mode) => void
   handleSkip: () => void
   handleReset: () => void
@@ -106,17 +118,33 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
   const [videoInput, setVideoInput] = useState('')
   const [showVideoInput, setShowVideoInput] = useState(false)
   const [iframeKey, setIframeKey] = useState(0)
+  const [sessions, setSessions] = useState<PomodoroSession[]>([])
+  const [stats, setStats] = useState<PomodoroStats | null>(null)
 
   const modeRef = useRef(mode)
   const sessionCountRef = useRef(sessionCount)
   const completedRef = useRef(false)
+  const startedAtRef = useRef<Date | null>(null)
 
   useEffect(() => { modeRef.current = mode }, [mode])
   useEffect(() => { sessionCountRef.current = sessionCount }, [sessionCount])
 
+  const refreshSessions = useCallback(() => {
+    pomodoroService.list(100).then(res => setSessions(res.data)).catch(() => {})
+    pomodoroService.stats().then(res => setStats(res.data)).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    refreshSessions()
+  }, [refreshSessions])
+
   useEffect(() => {
     if (!isRunning) return
     completedRef.current = false
+
+    if (modeRef.current === 'focus' && !startedAtRef.current) {
+      startedAtRef.current = new Date()
+    }
 
     const id = setInterval(() => {
       setTimeLeft(prev => Math.max(0, prev - 1))
@@ -135,10 +163,18 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
 
     const currentMode = modeRef.current
     const currentCount = sessionCountRef.current
+    const startedAt = startedAtRef.current
+    startedAtRef.current = null
 
     if (currentMode === 'focus') {
       const newCount = currentCount + 1
       setSessionCount(newCount)
+      pomodoroService.create({
+        mode: 'focus',
+        startedAt: (startedAt ?? new Date()).toISOString(),
+        completedAt: new Date().toISOString(),
+        durationSeconds: MODES.focus.duration * 60,
+      }).then(() => refreshSessions()).catch(() => {})
       if (newCount % 4 === 0) {
         setMode('longBreak')
         setTimeLeft(MODES.longBreak.duration * 60)
@@ -150,10 +186,11 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
       setMode('focus')
       setTimeLeft(MODES.focus.duration * 60)
     }
-  }, [timeLeft])
+  }, [timeLeft, refreshSessions])
 
   const handleModeChange = useCallback((newMode: Mode) => {
     setIsRunning(false)
+    startedAtRef.current = null
     setMode(newMode)
     setTimeLeft(MODES[newMode].duration * 60)
   }, [])
@@ -200,6 +237,7 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
 
   const handleSkip = useCallback(() => {
     setIsRunning(false)
+    startedAtRef.current = null
     const currentMode = modeRef.current
     const currentCount = sessionCountRef.current
 
@@ -221,6 +259,7 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
 
   const handleReset = useCallback(() => {
     setIsRunning(false)
+    startedAtRef.current = null
     setTimeLeft(MODES[modeRef.current].duration * 60)
   }, [])
 
@@ -235,6 +274,7 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
     mode, timeLeft, isRunning, sessionCount,
     videoId, videoInput, showVideoInput, iframeKey,
     totalSeconds, progress, showMusic,
+    sessions, stats, refreshSessions,
     handleModeChange, handleSkip, handleReset, toggleRunning,
     handleSelectPreset, handleVideoUrlInput, handleApplyVideo, handleInputKeyDown,
     setVideoInput, setShowMusic,
@@ -242,6 +282,7 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
     mode, timeLeft, isRunning, sessionCount,
     videoId, videoInput, showVideoInput, iframeKey,
     totalSeconds, progress, showMusic,
+    sessions, stats, refreshSessions,
     handleModeChange, handleSkip, handleReset, toggleRunning,
     handleSelectPreset, handleVideoUrlInput, handleApplyVideo, handleInputKeyDown,
   ])
