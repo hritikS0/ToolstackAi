@@ -25,8 +25,10 @@ export function RegisterPage() {
       } else {
         navigate(config.auth.dashboardPath)
       }
+    } catch (err: any) {
+      const errMsg = err.response?.data?.message || err.message || 'Registration failed'
+      setError(errMsg)
     }
-    catch { setError('Registration failed') }
   }
 
   return (

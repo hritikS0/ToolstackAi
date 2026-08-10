@@ -10,15 +10,32 @@ async function getApiKeyForUser(userId: string): Promise<string> {
   if (userKey) return userKey;
   const envKey = process.env.NVIDIA_API_KEY;
   if (envKey) return envKey;
-  throw Object.assign(new Error("NVIDIA API key not configured \u2014 add your key in Settings \u2192 API Keys"), { statusCode: 500 });
+  throw Object.assign(
+    new Error(
+      "NVIDIA API key not configured \u2014 add your key in Settings \u2192 API Keys",
+    ),
+    { statusCode: 500 },
+  );
 }
 
-export async function generateEmbedding(text: string, inputType?: "query" | "passage", userId?: string): Promise<number[]> {
-  const apiKey = userId ? await getApiKeyForUser(userId) : process.env.NVIDIA_API_KEY;
+export async function generateEmbedding(
+  text: string,
+  inputType?: "query" | "passage",
+  userId?: string,
+): Promise<number[]> {
+  const apiKey = userId
+    ? await getApiKeyForUser(userId)
+    : process.env.NVIDIA_API_KEY;
   if (!apiKey) {
-    throw Object.assign(new Error("NVIDIA API key not configured \u2014 add your key in Settings \u2192 API Keys"), { statusCode: 500 });
+    throw Object.assign(
+      new Error(
+        "NVIDIA API key not configured \u2014 add your key in Settings \u2192 API Keys",
+      ),
+      { statusCode: 500 },
+    );
   }
-  const model = process.env.NVIDIA_EMBED_MODEL || "nvidia/llama-nemotron-embed-vl-1b-v2";
+  const model =
+    process.env.NVIDIA_EMBED_MODEL || "nvidia/llama-nemotron-embed-vl-1b-v2";
 
   try {
     const body: Record<string, unknown> = {
@@ -39,9 +56,14 @@ export async function generateEmbedding(text: string, inputType?: "query" | "pas
 
     if (!response.ok) {
       const errorBody = await response.text();
-      throw Object.assign(new Error(`NVIDIA Embedding API error: ${response.status} ${errorBody}`), {
-        statusCode: response.status,
-      });
+      throw Object.assign(
+        new Error(
+          `NVIDIA Embedding API error: ${response.status} ${errorBody}`,
+        ),
+        {
+          statusCode: response.status,
+        },
+      );
     }
 
     const data = (await response.json()) as { data: { embedding: number[] }[] };
@@ -51,13 +73,20 @@ export async function generateEmbedding(text: string, inputType?: "query" | "pas
   }
 }
 
-export async function chunkText(text: string, maxChunkSize = 500, overlap = 50): Promise<string[]> {
+export async function chunkText(
+  text: string,
+  maxChunkSize = 500,
+  overlap = 50,
+): Promise<string[]> {
   const sentences = text.split(/(?<=[.!?])\s+/);
   const chunks: string[] = [];
   let current = "";
 
   for (const sentence of sentences) {
-    if ((current + " " + sentence).trim().length > maxChunkSize && current.length > 0) {
+    if (
+      (current + " " + sentence).trim().length > maxChunkSize &&
+      current.length > 0
+    ) {
       chunks.push(current.trim());
       current = sentence;
     } else {

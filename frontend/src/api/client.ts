@@ -16,7 +16,10 @@ apiClient.interceptors.request.use((cfg: InternalAxiosRequestConfig) => {
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error: AxiosError) => {
-    if (error.response?.status === 401) {
+    const isAuthRoute = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/register')
+    const isAlreadyOnLogin = typeof window !== 'undefined' && window.location.pathname === appConfig.auth.loginPath
+
+    if (error.response?.status === 401 && !isAuthRoute && !isAlreadyOnLogin) {
       localStorage.removeItem(appConfig.auth.tokenKey)
       localStorage.removeItem(appConfig.auth.userKey)
       window.location.href = appConfig.auth.loginPath

@@ -17,8 +17,13 @@ export function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    try { await login(email, password); navigate(config.auth.dashboardPath) }
-    catch { setError('Invalid email or password') }
+    try {
+      await login(email, password)
+      navigate(config.auth.dashboardPath)
+    } catch (err: any) {
+      const errMsg = err.response?.data?.message || err.message || 'Invalid email or password'
+      setError(errMsg)
+    }
   }
 
   return (

@@ -30,6 +30,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(config.auth.tokenKey, res.token)
         localStorage.setItem(config.auth.userKey, JSON.stringify(res.user))
         setUser(res.user)
+      } else {
+        throw new Error('Authentication failed')
       }
     } finally { setIsLoading(false) }
   }, [])
@@ -46,9 +48,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setWelcomeConversationId(res.welcomeConversationId)
         }
         return res.welcomeConversationId || null
+      } else {
+        throw new Error('Registration failed')
       }
     } finally { setIsLoading(false) }
-    return null
   }, [])
 
   const clearWelcomeId = useCallback(() => setWelcomeConversationId(null), [])
