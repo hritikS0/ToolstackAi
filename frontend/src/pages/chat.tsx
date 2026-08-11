@@ -244,6 +244,8 @@ export function ChatPage() {
         setIsThinking(false)
         await queryClient.refetchQueries({ queryKey: ['messages', convId] })
         setOptimisticUserMsg(null)
+        setStreamingContent('')
+        setStreamingSources(null)
         queryClient.invalidateQueries({ queryKey: ['conversations'] })
       }
       return
@@ -282,6 +284,8 @@ export function ChatPage() {
         setIsThinking(false)
         await queryClient.refetchQueries({ queryKey: ['messages', convId] })
         setOptimisticUserMsg(null)
+        setStreamingContent('')
+        setStreamingSources(null)
         queryClient.invalidateQueries({ queryKey: ['conversations'] })
       }
       return
@@ -335,11 +339,16 @@ export function ChatPage() {
       rafRef.current = null
       contentRef.current = ''
 
-      if (failed && !fullContent) {
-        setStreamingContent('')
-      }
+      // Flush final text so a cancelled rAF can't leave streamingContent short of what was saved
+      if (fullContent) setStreamingContent(fullContent)
+      if (failed && !fullContent) setStreamingContent('')
 
-      queryClient.invalidateQueries({ queryKey: ['messages', convId] })
+      // Await refetch then clear live UI — same as vision/PDF. Invalidating without clearing
+      // optimisticUserMsg can put the server assistant above the optimistic user bubble.
+      await queryClient.refetchQueries({ queryKey: ['messages', convId] })
+      setOptimisticUserMsg(null)
+      setStreamingContent('')
+      setStreamingSources(null)
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
     }
   }
@@ -573,9 +582,15 @@ export function ChatPage() {
               </div>
             ) : (
               <div className="max-w-4xl mx-auto py-5 px-5 space-y-5">
-                {(messages as Message[]).filter(m => {
+                {(messages as Message[]).filter((m, idx, arr) => {
                   if (optimisticUserMsg && m.role === 'user' && m.content === optimisticUserMsg) return false
                   if (streamingContent && m.role === 'assistant' && m.content === streamingContent) return false
+                  // While the optimistic user bubble is still mounted, hide the trailing
+                  // server assistant so a content mismatch can't place it above the user.
+                  if (optimisticUserMsg && m.role === 'assistant') {
+                    const lastAssistantIdx = arr.reduce((last, msg, i) => msg.role === 'assistant' ? i : last, -1)
+                    if (idx === lastAssistantIdx) return false
+                  }
                   return true
                 }).map(msg => (
                   <MessageBlock
