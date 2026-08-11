@@ -1,6 +1,7 @@
 import { getPrismaClient } from "../../shared/db/prismaClient.js";
 import { nvidia } from "../../ai/providers/nvidia.js";
 import { getUserKey } from "../api-keys/api-keys.service.js";
+import { logger } from "../../shared/utils/logger.js";
 import type { CreateTaskInput, UpdateTaskInput } from "./tasks.validator.js";
 
 export async function createTask(userId: string, data: CreateTaskInput) {
@@ -62,6 +63,21 @@ export async function updateTask(userId: string, taskId: string, data: UpdateTas
       ...(data.projectId !== undefined && { projectId: data.projectId }),
     },
   });
+}
+
+export async function cleanupOverdueTasks() {
+  const prisma = getPrismaClient();
+  const now = new Date();
+  const result = await prisma.task.deleteMany({
+    where: {
+      dueDate: { lt: now },
+      status: { not: "done" },
+    },
+  });
+  if (result.count > 0) {
+    logger.info({ deleted: result.count }, "Removed overdue tasks that were not completed");
+  }
+  return result.count;
 }
 
 export async function deleteTask(userId: string, taskId: string) {

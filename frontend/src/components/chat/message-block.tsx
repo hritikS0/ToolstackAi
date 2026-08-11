@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
 import remarkGfm from 'remark-gfm'
 import { cn } from '@/lib/utils'
-import { Copy, Check, RefreshCw, Pencil, Sparkles, Globe } from 'lucide-react'
+import { Copy, Check, RefreshCw, Pencil, Sparkles, Globe, FileText } from 'lucide-react'
 
 interface MessageBlockProps {
   role: 'user' | 'assistant'
@@ -18,6 +18,8 @@ interface MessageBlockProps {
   onCopy?: () => void
   onEdit?: () => void
   imageUrl?: string
+  pdfAttachment?: { fileName: string; url?: string } | null
+  onViewPdf?: () => void
   sources?: { title: string; url: string; description?: string }[]
 }
 
@@ -180,12 +182,23 @@ function AssistantMessage({
   )
 }
 
-function UserMessage({ content, imageUrl }: { content: string; imageUrl?: string }) {
+function UserMessage({ content, imageUrl, pdfAttachment, onViewPdf }: { content: string; imageUrl?: string; pdfAttachment?: MessageBlockProps['pdfAttachment']; onViewPdf?: () => void }) {
   return (
     <div className="flex justify-end animate-fade-in">
       <div className="max-w-[90%] rounded-[4px] bg-accent-muted border border-accent/20 px-3 py-2 space-y-2">
         {imageUrl && (
           <img src={imageUrl} alt="Attached" className="max-w-full h-auto max-h-48 rounded-[3px] border border-accent/10" />
+        )}
+        {pdfAttachment && (
+          <button
+            type="button"
+            onClick={onViewPdf}
+            className="flex items-center gap-2 rounded-[3px] border border-accent/20 bg-base-950/40 px-2.5 py-2 hover:border-accent/40 transition-colors w-full text-left cursor-pointer"
+          >
+            <FileText className="size-4 text-accent shrink-0" />
+            <span className="text-[12px] text-base-200 font-mono truncate">{pdfAttachment.fileName}</span>
+            <span className="text-[9px] font-mono text-base-500 shrink-0">VIEW</span>
+          </button>
         )}
         {content && <div className="text-[15px] text-base-200 whitespace-pre-wrap">{String(content)}</div>}
       </div>
@@ -204,6 +217,8 @@ function arePropsEqual(prev: MessageBlockProps, next: MessageBlockProps) {
     prev.isThinking === next.isThinking &&
     prev.thinkingMessage === next.thinkingMessage &&
     prev.imageUrl === next.imageUrl &&
+    prev.pdfAttachment?.fileName === next.pdfAttachment?.fileName &&
+    prev.pdfAttachment?.url === next.pdfAttachment?.url &&
     JSON.stringify(prev.sources) === JSON.stringify(next.sources)
   )
 }
@@ -212,5 +227,5 @@ export const MessageBlock = memo(function MessageBlock(props: MessageBlockProps)
   if (props.role === 'assistant') {
     return <AssistantMessage {...props} />
   }
-  return <UserMessage content={String(props.content)} imageUrl={props.imageUrl} />
+  return <UserMessage content={String(props.content)} imageUrl={props.imageUrl} pdfAttachment={props.pdfAttachment} onViewPdf={props.onViewPdf} />
 }, arePropsEqual)

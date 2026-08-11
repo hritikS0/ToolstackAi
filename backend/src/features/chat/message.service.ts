@@ -47,10 +47,11 @@ export async function getMessageService(conversationId: string) {
     return await Promise.all(
       messages.map(async (msg) => {
         if (msg.chatMedia?.filePath) {
-          const url = await getSignedUrl(msg.chatMedia.filePath, "images").catch(() => null);
+          const bucket = msg.chatMedia.mediaType === "pdf" ? "pdfs" : "images";
+          const url = await getSignedUrl(msg.chatMedia.filePath, bucket).catch(() => null);
           return {
             ...msg,
-            chatMedia: { id: msg.chatMedia.id, fileName: msg.chatMedia.fileName, mimeType: msg.chatMedia.mimeType, filePath: msg.chatMedia.filePath, url },
+            chatMedia: { id: msg.chatMedia.id, fileName: msg.chatMedia.fileName, mimeType: msg.chatMedia.mimeType, filePath: msg.chatMedia.filePath, mediaType: msg.chatMedia.mediaType, url },
           };
         }
         return msg;

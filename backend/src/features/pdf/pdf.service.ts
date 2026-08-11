@@ -77,6 +77,26 @@ export async function processPdfUpload(
     },
   });
 
+  const chatMedia = await prisma.chatMedia.create({
+    data: {
+      conversationId: document.id,
+      userId,
+      fileName: file.originalname,
+      mimeType: "application/pdf",
+      filePath: upload.fullPath,
+      mediaType: "pdf",
+    },
+  });
+
+  await prisma.message.create({
+    data: {
+      conversationId: document.id,
+      role: "user",
+      content: `📄 ${file.originalname}`,
+      chatMediaId: chatMedia.id,
+    },
+  });
+
   const chunks = await chunkText(extractedText);
   const store = new InMemoryVectorStore();
 

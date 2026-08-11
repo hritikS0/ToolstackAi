@@ -62,7 +62,6 @@ export function ChatPage() {
   const [optimisticUserMsg, setOptimisticUserMsg] = useState<string | null>(null)
   const [streamError, setStreamError] = useState<string | null>(null)
   const [pdfUploading, setPdfUploading] = useState(false)
-  const [pdfUploadError, setPdfUploadError] = useState<string | null>(null)
   const [showPdfViewer, setShowPdfViewer] = useState(false)
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null)
   const [attachedImage, setAttachedImage] = useState<{ file: File; preview: string } | null>(null)
@@ -134,7 +133,6 @@ export function ChatPage() {
   useEffect(() => {
     if (!id) return
     setShowPdfViewer(false)
-    setPdfUploadError(null)
     if (!isDocument) { setPdfBlobUrl(null); return }
     let cancelled = false
     const token = localStorage.getItem(config.auth.tokenKey)
@@ -214,10 +212,11 @@ export function ChatPage() {
     setIsStreaming(true)
     contentRef.current = ''
     setIsThinking(true)
+    const queryComplexity = Math.min(msg.length / 80, 1)
     thinkingRef.current = {
       active: true,
       startedAt: Date.now(),
-      minMs: 350 + Math.floor(Math.random() * 350),
+      minMs: Math.round(180 + queryComplexity * 500 + Math.random() * 150),
       pendingContent: '',
       timerId: null,
     }
@@ -368,7 +367,6 @@ export function ChatPage() {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
-    setPdfUploadError(null)
     setPdfUploading(true)
     try {
       let convId = id
@@ -381,11 +379,11 @@ export function ChatPage() {
       }
       if (!convId) return
       await pdfService.uploadPdf(file, convId)
-      setShowPdfViewer(true)
+      queryClient.invalidateQueries({ queryKey: ['messages', convId] })
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : 'PDF upload failed.'
-      setPdfUploadError(errMsg)
+      setStreamError(errMsg)
     } finally {
       setPdfUploading(false)
     }
@@ -585,7 +583,9 @@ export function ChatPage() {
                     role={msg.role as 'user' | 'assistant'}
                     content={msg.content}
                     timestamp={msg.createdAt ? formatRelativeTime(msg.createdAt) : undefined}
-                    imageUrl={msg.role === 'user' ? (msg.chatMedia?.url || localImagePreviews[msg.content] || undefined) : undefined}
+                    imageUrl={msg.role === 'user' ? (msg.chatMedia?.mediaType !== 'pdf' ? (msg.chatMedia?.url || localImagePreviews[msg.content] || undefined) : undefined) : undefined}
+                    pdfAttachment={msg.role === 'user' && msg.chatMedia?.mediaType === 'pdf' ? { fileName: msg.chatMedia.fileName, url: msg.chatMedia.url || undefined } : undefined}
+                    onViewPdf={() => setShowPdfViewer(true)}
                   />
                 ))}
 
@@ -660,34 +660,6 @@ export function ChatPage() {
             <div className="flex items-center gap-1.5 text-[11px] text-accent font-mono">
               <BrainCircuit className="size-3.5" />
               <span>{brainNoti}</span>
-            </div>
-          </div>
-        )}
-
-        {id && isDocument && (
-          <div className="shrink-0 border-t border-base-800 bg-surface/60 backdrop-blur-sm">
-            <div className="flex items-center gap-2 max-w-4xl mx-auto px-4 py-1.5">
-              <FileText className="size-3 text-accent shrink-0" />
-              <span className="flex-1 text-[11px] text-base-400 font-mono truncate">
-                {currentConv?.title || 'Document'}
-              </span>
-              {pdfUploading && (
-                <span className="flex items-center gap-1.5 text-[10px] text-base-500 font-mono">
-                  <Loader2 className="size-3 animate-spin" />
-                  Uploading...
-                </span>
-              )}
-              {pdfUploadError && (
-                <span className="text-[10px] text-red-400 font-mono truncate">{pdfUploadError}</span>
-              )}
-              <button
-                type="button"
-                onClick={() => setShowPdfViewer(v => !v)}
-                className="text-[10px] font-mono text-base-500 hover:text-accent transition-colors flex items-center gap-1"
-              >
-                {showPdfViewer ? 'Hide' : 'View'}
-                <X className={cn('size-2.5 transition-transform', showPdfViewer && 'rotate-45')} />
-              </button>
             </div>
           </div>
         )}

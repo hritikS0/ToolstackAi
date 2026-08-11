@@ -48,6 +48,7 @@ export interface Message {
     fileName: string
     mimeType: string
     filePath: string
+    mediaType?: string
     url?: string | null
   } | null
   createdAt: string
