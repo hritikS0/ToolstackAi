@@ -50,16 +50,21 @@ export function formatFocusTime(totalSeconds: number): string {
 export function playBeep() {
   try {
     const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-    osc.frequency.value = 880
-    osc.type = 'sine'
-    gain.gain.setValueAtTime(0.3, ctx.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
-    osc.start(ctx.currentTime)
-    osc.stop(ctx.currentTime + 0.4)
+    const tones = [660, 880, 1100]
+    tones.forEach((freq, i) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.frequency.value = freq
+      osc.type = 'sine'
+      const start = ctx.currentTime + i * 0.18
+      gain.gain.setValueAtTime(0, start)
+      gain.gain.linearRampToValueAtTime(0.35, start + 0.04)
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.4)
+      osc.start(start)
+      osc.stop(start + 0.4)
+    })
   } catch { /* audio not supported */ }
 }
 
@@ -79,6 +84,11 @@ export function extractVideoId(input: string): string | null {
   return null
 }
 
+export interface CompletionAlert {
+  completedMode: Mode
+  nextMode: Mode
+}
+
 interface PomodoroContextType {
   mode: Mode
   timeLeft: number
@@ -93,6 +103,8 @@ interface PomodoroContextType {
   showMusic: boolean
   sessions: PomodoroSession[]
   stats: PomodoroStats | null
+  completionAlert: CompletionAlert | null
+  dismissAlert: () => void
   refreshSessions: () => void
   handleModeChange: (newMode: Mode) => void
   handleSkip: () => void
@@ -120,6 +132,7 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
   const [iframeKey, setIframeKey] = useState(0)
   const [sessions, setSessions] = useState<PomodoroSession[]>([])
   const [stats, setStats] = useState<PomodoroStats | null>(null)
+  const [completionAlert, setCompletionAlert] = useState<CompletionAlert | null>(null)
 
   const modeRef = useRef(mode)
   const sessionCountRef = useRef(sessionCount)
@@ -175,6 +188,8 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
         completedAt: new Date().toISOString(),
         durationSeconds: MODES.focus.duration * 60,
       }).then(() => refreshSessions()).catch(() => {})
+      const nextMode = newCount % 4 === 0 ? 'longBreak' : 'shortBreak'
+      setCompletionAlert({ completedMode: 'focus', nextMode })
       if (newCount % 4 === 0) {
         setMode('longBreak')
         setTimeLeft(MODES.longBreak.duration * 60)
@@ -183,6 +198,7 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
         setTimeLeft(MODES.shortBreak.duration * 60)
       }
     } else {
+      setCompletionAlert({ completedMode: currentMode, nextMode: 'focus' })
       setMode('focus')
       setTimeLeft(MODES.focus.duration * 60)
     }
@@ -267,6 +283,10 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
     setIsRunning(r => !r)
   }, [])
 
+  const dismissAlert = useCallback(() => {
+    setCompletionAlert(null)
+  }, [])
+
   const totalSeconds = MODES[mode].duration * 60
   const progress = timeLeft / totalSeconds
 
@@ -274,7 +294,8 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
     mode, timeLeft, isRunning, sessionCount,
     videoId, videoInput, showVideoInput, iframeKey,
     totalSeconds, progress, showMusic,
-    sessions, stats, refreshSessions,
+    sessions, stats, completionAlert,
+    refreshSessions, dismissAlert,
     handleModeChange, handleSkip, handleReset, toggleRunning,
     handleSelectPreset, handleVideoUrlInput, handleApplyVideo, handleInputKeyDown,
     setVideoInput, setShowMusic,
@@ -282,7 +303,8 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
     mode, timeLeft, isRunning, sessionCount,
     videoId, videoInput, showVideoInput, iframeKey,
     totalSeconds, progress, showMusic,
-    sessions, stats, refreshSessions,
+    sessions, stats, completionAlert,
+    refreshSessions, dismissAlert,
     handleModeChange, handleSkip, handleReset, toggleRunning,
     handleSelectPreset, handleVideoUrlInput, handleApplyVideo, handleInputKeyDown,
   ])
@@ -300,6 +322,7 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
         />
       )}
       <PomodoroWidget />
+      <PomodoroCompletionAlert />
     </PomodoroContext.Provider>
   )
 }
@@ -380,6 +403,64 @@ function PomodoroWidget() {
           </button>
         </div>
       )}
+    </div>
+  )
+}
+
+const ALERT_COPY: Record<Mode, { emoji: string; title: string; subtitle: (nextMode: Mode) => string }> = {
+  focus: {
+    emoji: '🎉',
+    title: 'Focus session complete!',
+    subtitle: (next) => next === 'longBreak' ? 'Time for a long break — you\'ve earned it.' : 'Time for a short break.',
+  },
+  shortBreak: {
+    emoji: '⚡',
+    title: 'Break\'s over!',
+    subtitle: () => 'Ready to focus again?',
+  },
+  longBreak: {
+    emoji: '⚡',
+    title: 'Long break complete!',
+    subtitle: () => 'Ready to jump back into focus?',
+  },
+}
+
+function PomodoroCompletionAlert() {
+  const { completionAlert, dismissAlert, toggleRunning } = usePomodoro()
+
+  if (!completionAlert) return null
+
+  const copy = ALERT_COPY[completionAlert.completedMode]
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={dismissAlert}
+      />
+      <div className="relative z-10 bg-surface border border-base-700 rounded-[6px] shadow-2xl p-6 w-[320px] flex flex-col items-center gap-3 animate-fade-in">
+        <span className="text-4xl leading-none">{copy.emoji}</span>
+        <div className="text-center">
+          <p className="text-base font-mono font-medium text-base-100">{copy.title}</p>
+          <p className="text-[12px] text-base-400 font-mono mt-1">{copy.subtitle(completionAlert.nextMode)}</p>
+        </div>
+        <div className="flex items-center gap-2 mt-1 w-full">
+          <button
+            type="button"
+            onClick={() => { dismissAlert(); toggleRunning() }}
+            className="flex-1 h-8 rounded-[4px] bg-accent text-white text-[12px] font-mono font-medium hover:bg-accent/90 transition-colors"
+          >
+            Start {MODES[completionAlert.nextMode].label}
+          </button>
+          <button
+            type="button"
+            onClick={dismissAlert}
+            className="h-8 px-3 rounded-[4px] bg-base-800 text-base-400 text-[12px] font-mono hover:bg-base-700 hover:text-base-200 transition-colors"
+          >
+            Dismiss
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
