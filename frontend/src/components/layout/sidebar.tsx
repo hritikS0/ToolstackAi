@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useInfiniteQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import {
-  MessageSquare, History, Settings,
+  MessageSquare, History, Settings, Mail,
   PanelLeftClose, PanelLeft, Palette, BrainCircuit, Images,
   ChevronDown, ChevronRight, Plus, Trophy, CheckSquare, Flame, StickyNote, FolderOpen, Timer,
   Pin, Trash2, Loader2, MoreHorizontal
@@ -14,6 +14,7 @@ import { useToast } from '@/components/ui/toast'
 import type { Conversation } from '@/types/api'
 
 const navItems = [
+  { icon: Mail, label: 'Mail', path: '/mail' },
   { icon: CheckSquare, label: 'Tasks', path: '/tasks' },
   { icon: Flame, label: 'Habits', path: '/habits' },
   { icon: FolderOpen, label: 'Projects', path: '/projects' },

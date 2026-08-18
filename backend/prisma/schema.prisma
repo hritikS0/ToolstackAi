@@ -31,6 +31,8 @@ model User {
   collections    Collection[]
   automations    Automation[]
   pomodoroSessions PomodoroSession[]
+  emailAccounts    EmailAccount[]
+  notifications    Notification[]
 }
 
 model Conversation {
@@ -345,3 +347,81 @@ model PdfEmbedding {
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 }
+
+model EmailAccount {
+  id                String         @id @default(cuid())
+  userId            String
+  email             String
+  displayName       String?
+  provider          String         @default("imap") // "imap", "gmail", "outlook"
+  imapHost          String?
+  imapPort          Int?           @default(993)
+  smtpHost          String?
+  smtpPort          Int?           @default(465)
+  username          String?
+  encryptedPassword String?        // App password or OAuth token
+  isDefault         Boolean        @default(false)
+  lastSyncedAt      DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  threads           EmailThread[]
+  messages          EmailMessage[]
+}
+
+model EmailThread {
+  id             String         @id @default(cuid())
+  accountId      String
+  subject        String         @default("(No Subject)")
+  snippet        String?        @default("")
+  category       String         @default("primary") // action_required, primary, updates, finance, newsletter, spam
+  urgency        Int            @default(1)         // 1 (low) to 5 (critical)
+  isRead         Boolean        @default(false)
+  isStarred      Boolean        @default(false)
+  isArchived     Boolean        @default(false)
+  aiSummary      String?
+  actionItems    Json           @default("[]")
+  lastMessageAt  DateTime       @default(now())
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  account        EmailAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  messages       EmailMessage[]
+}
+
+model EmailMessage {
+  id           String       @id @default(cuid())
+  threadId     String
+  accountId    String
+  messageId    String       @default("")
+  fromAddress  String
+  fromName     String?
+  toAddresses  String[]
+  ccAddresses  String[]     @default([])
+  bccAddresses String[]     @default([])
+  subject      String
+  bodyText     String       @default("")
+  bodyHtml     String?
+  isDraft      Boolean      @default(false)
+  sentAt       DateTime     @default(now())
+  createdAt    DateTime     @default(now())
+
+  thread       EmailThread  @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  account      EmailAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // "mail", "task", "habit", "system"
+  title     String
+  message   String
+  link      String?  // "/mail", "/tasks", "/habits"
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+

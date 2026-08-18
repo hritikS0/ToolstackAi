@@ -10,6 +10,8 @@ import { config } from '@/config'
 import { Menu } from 'lucide-react'
 import { useEffect } from 'react'
 
+import { NotificationPanel } from '@/components/notifications/notification-panel'
+
 export function AppLayout() {
   const { isAuthenticated } = useAuth()
   const { setIsOpen } = useTheme()
@@ -43,7 +45,10 @@ export function AppLayout() {
               <Menu className="size-4" />
             </button>
             <div className="flex-1" />
-            <UserMenu />
+            <div className="flex items-center gap-2">
+              <NotificationPanel />
+              <UserMenu />
+            </div>
           </div>
           <main className="flex-1 overflow-hidden">
             <Outlet />
