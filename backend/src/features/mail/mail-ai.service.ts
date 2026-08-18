@@ -160,6 +160,9 @@ export async function generateDraftReply(
     }
   }
 
+  const preset = data.preset || "formal";
+  const tone = data.tone || "professional";
+
   const presetGuides: Record<string, string> = {
     quick_reply: "Draft a brief, 1-2 sentence acknowledgment or quick answer.",
     formal: "Draft a polished, professional email response with formal greeting and signature.",
@@ -184,10 +187,10 @@ ${thread.messages.map(m => `From: ${m.fromName || m.fromAddress}\nSubject: ${m.s
 ${contextText}
 
 --- INSTRUCTIONS ---
-Preset Strategy: ${presetGuides[data.preset || "formal"] || presetGuides.formal}
-Tone Style: ${toneGuides[data.tone || "professional"] || toneGuides.professional}
+Preset Strategy: ${presetGuides[preset] || presetGuides.formal}
+Tone Style: ${toneGuides[tone] || toneGuides.professional}
 Format Type: ${data.formatType || "concise"}
-${data.userInstruction ? `User Custom Note: ${data.userInstruction}` : ""}
+${data.userInstruction ? `User Custom Instruction: ${data.userInstruction}` : ""}
 
 Draft a response email body text only.`;
 
@@ -197,21 +200,50 @@ Draft a response email body text only.`;
       { role: "user", content: prompt },
     ]);
 
-    const draftBody = response.choices[0]?.message?.content || "Thank you for your message. I have received your email and will follow up shortly.";
-
-    return {
-      threadId: thread.id,
-      to: [latestMessage.fromAddress],
-      subject: thread.subject.startsWith("Re:") ? thread.subject : `Re: ${thread.subject}`,
-      draftBody,
-    };
+    const draftBody = response.choices[0]?.message?.content || "";
+    if (draftBody.trim()) {
+      return {
+        threadId: thread.id,
+        to: [latestMessage.fromAddress],
+        subject: thread.subject.startsWith("Re:") ? thread.subject : `Re: ${thread.subject}`,
+        draftBody,
+      };
+    }
   } catch (error: any) {
-    console.error("AI Draft Generation error:", error);
-    return {
-      threadId: thread.id,
-      to: [latestMessage.fromAddress],
-      subject: thread.subject.startsWith("Re:") ? thread.subject : `Re: ${thread.subject}`,
-      draftBody: `Hi ${latestMessage.fromName || "there"},\n\nThank you for reaching out regarding "${thread.subject}". I have received your message and will review it promptly.\n\nBest regards,`,
-    };
+    console.error("AI Draft Generation error, using dynamic template:", error.message || error);
   }
+
+  // Dynamic Template Fallback using preset and tone
+  const recipient = latestMessage.fromName || "there";
+  let fallbackText = "";
+
+  switch (preset) {
+    case "quick_reply":
+      fallbackText = `Hi ${recipient},\n\nGot it, thank you! I'm reviewing "${thread.subject}" and will get back to you shortly.\n\nBest,`;
+      break;
+    case "polite_decline":
+      fallbackText = `Dear ${recipient},\n\nThank you for reaching out regarding "${thread.subject}". Unfortunately, I am unable to proceed with this at the moment. I appreciate your understanding.\n\nBest regards,`;
+      break;
+    case "follow_up":
+      fallbackText = `Hi ${recipient},\n\nI wanted to follow up on our thread regarding "${thread.subject}". Please let me know if there are any updates when you have a moment.\n\nBest regards,`;
+      break;
+    case "detailed":
+      fallbackText = `Hello ${recipient},\n\nThank you for the detailed information regarding "${thread.subject}". I am carefully reviewing all the points and will share a full update shortly.\n\nBest regards,`;
+      break;
+    case "formal":
+    default:
+      fallbackText = `Dear ${recipient},\n\nThank you for your email regarding "${thread.subject}". I have received your message and will review it promptly.\n\nSincerely,`;
+      break;
+  }
+
+  if (data.userInstruction) {
+    fallbackText += `\n\nNote: ${data.userInstruction}`;
+  }
+
+  return {
+    threadId: thread.id,
+    to: [latestMessage.fromAddress],
+    subject: thread.subject.startsWith("Re:") ? thread.subject : `Re: ${thread.subject}`,
+    draftBody: fallbackText,
+  };
 }

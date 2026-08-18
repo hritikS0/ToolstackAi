@@ -340,16 +340,37 @@ export async function sendEmail(
 
 export async function getThreads(
   userId: string,
-  filters?: { accountId?: string; category?: string; search?: string }
+  filters?: { accountId?: string; category?: string; search?: string; page?: number; limit?: number }
 ) {
   const prisma = getPrismaClient();
+
+  const page = Math.max(1, Number(filters?.page) || 1);
+  const limit = Math.max(1, Math.min(100, Number(filters?.limit) || 15));
+  const skip = (page - 1) * limit;
 
   const where: any = {
     account: { userId },
   };
 
   if (filters?.accountId) where.accountId = filters.accountId;
-  if (filters?.category && filters.category !== "all") where.category = filters.category;
+  
+  if (filters?.category && filters.category !== "all") {
+    if (filters.category === "sent") {
+      const userAccounts = await prisma.emailAccount.findMany({
+        where: { userId },
+        select: { email: true },
+      });
+      const emails = userAccounts.map(a => a.email);
+      where.messages = {
+        some: {
+          fromAddress: { in: emails },
+        },
+      };
+    } else {
+      where.category = filters.category;
+    }
+  }
+
   if (filters?.search) {
     where.OR = [
       { subject: { contains: filters.search, mode: "insensitive" } },
@@ -357,19 +378,32 @@ export async function getThreads(
     ];
   }
 
-  return prisma.emailThread.findMany({
-    where,
-    orderBy: { lastMessageAt: "desc" },
-    include: {
-      account: {
-        select: { email: true, displayName: true },
+  const [total, threads] = await Promise.all([
+    prisma.emailThread.count({ where }),
+    prisma.emailThread.findMany({
+      where,
+      orderBy: { lastMessageAt: "desc" },
+      skip,
+      take: limit,
+      include: {
+        account: {
+          select: { email: true, displayName: true },
+        },
+        messages: {
+          orderBy: { sentAt: "asc" },
+          take: 1, // latest preview or first message
+        },
       },
-      messages: {
-        orderBy: { sentAt: "asc" },
-        take: 1, // latest preview or first message
-      },
-    },
-  });
+    }),
+  ]);
+
+  return {
+    threads,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit) || 1,
+  };
 }
 
 export async function getThreadDetails(userId: string, threadId: string) {

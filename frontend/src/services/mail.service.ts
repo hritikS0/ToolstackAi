@@ -88,8 +88,15 @@ export const mailService = {
     return res.data
   },
 
-  async getThreads(params?: { accountId?: string; category?: string; search?: string }) {
-    const res = await apiClient.get<{ success: boolean; threads: EmailThread[] }>('/mail/threads', { params })
+  async getThreads(params?: { accountId?: string; category?: string; search?: string; page?: number; limit?: number }) {
+    const res = await apiClient.get<{
+      success: boolean
+      threads: EmailThread[]
+      total: number
+      page: number
+      limit: number
+      totalPages: number
+    }>('/mail/threads', { params })
     return res.data
   },
 

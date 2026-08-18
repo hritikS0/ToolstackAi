@@ -54,14 +54,14 @@ export function NotificationPanel() {
     const token = localStorage.getItem(appConfig.auth.tokenKey)
     if (!token) return
 
-    // Connect to backend server URL
-    const socketUrl = import.meta.env.VITE_API_BASE_URL
-      ? new URL(import.meta.env.VITE_API_BASE_URL, window.location.origin).origin
-      : 'http://localhost:5001'
+    // Connect to backend Socket.io server (port 5001)
+    const backendPort = import.meta.env.VITE_BACKEND_PORT || '5001'
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || `${window.location.protocol}//${window.location.hostname}:${backendPort}`
 
     const socket: Socket = io(socketUrl, {
       auth: { token },
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
+      reconnectionAttempts: 5,
     })
 
     socket.on('new_notification', (newNotif: AppNotification) => {

@@ -56,9 +56,15 @@ export async function syncAccountHandler(req: Request, res: Response, next: Next
 export async function getThreadsHandler(req: Request, res: Response, next: NextFunction) {
   try {
     const userId = (req as any).user.id;
-    const { accountId, category, search } = req.query as Record<string, string>;
-    const threads = await mailService.getThreads(userId, { accountId, category, search });
-    res.status(200).json({ success: true, threads });
+    const { accountId, category, search, page, limit } = req.query as Record<string, string>;
+    const result = await mailService.getThreads(userId, {
+      accountId,
+      category,
+      search,
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 15,
+    });
+    res.status(200).json({ success: true, ...result });
   } catch (error) {
     next(error);
   }

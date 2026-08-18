@@ -183,11 +183,17 @@ export function Sidebar({ collapsed, onToggle, onThemeClick }: { collapsed: bool
                     const menuOpen = contextMenuId === c.id
                     return (
                       <div key={c.id} className="relative">
-                        <button
-                          type="button"
+                        <div
+                          role="button"
+                          tabIndex={0}
                           onClick={() => navigate(`/chat/${c.id}`)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              navigate(`/chat/${c.id}`)
+                            }
+                          }}
                           className={cn(
-                            "w-full text-left truncate px-3 py-1.5 rounded text-[12px] font-mono flex items-center gap-1.5 group",
+                            "w-full text-left truncate px-3 py-1.5 rounded text-[12px] font-mono flex items-center gap-1.5 group cursor-pointer select-none",
                             active
                               ? "bg-accent-muted text-accent font-medium"
                               : cn(
@@ -220,7 +226,7 @@ export function Sidebar({ collapsed, onToggle, onThemeClick }: { collapsed: bool
                           >
                             <MoreHorizontal className="size-3" />
                           </button>
-                        </button>
+                        </div>
                         {menuOpen && (
                           <>
                             <div className="fixed inset-0 z-10" onClick={() => setContextMenuId(null)} />

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { mailService, type EmailThread } from '@/services/mail.service'
 import { useToast } from '@/components/ui/toast'
@@ -11,6 +11,7 @@ import {
 
 const CATEGORIES = [
   { id: 'all', label: 'All Messages', icon: Inbox },
+  { id: 'sent', label: 'Sent Mail', icon: Send, color: 'text-teal-400 bg-teal-400/10' },
   { id: 'action_required', label: 'Action Required', icon: AlertCircle, color: 'text-amber-400 bg-amber-400/10' },
   { id: 'primary', label: 'Primary', icon: Mail, color: 'text-emerald-400 bg-emerald-400/10' },
   { id: 'updates', label: 'Updates', icon: Clock, color: 'text-blue-400 bg-blue-400/10' },
@@ -19,6 +20,59 @@ const CATEGORIES = [
   { id: 'spam', label: 'Spam & Promos', icon: ShieldAlert, color: 'text-rose-400 bg-rose-400/10' },
 ]
 
+function EmailHtmlViewer({ html }: { html: string }) {
+  const [height, setHeight] = useState(350)
+
+  const doc = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+          body { margin: 0; padding: 12px; background-color: #ffffff; color: #111827; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; }
+          img { max-width: 100% !important; height: auto !important; }
+          table { max-width: 100% !important; table-layout: auto; }
+          pre, code { white-space: pre-wrap; word-break: break-word; }
+        </style>
+      </head>
+      <body>
+        ${html}
+        <script>
+          function sendHeight() {
+            var h = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, 150);
+            window.parent.postMessage({ type: 'EMAIL_IFRAME_HEIGHT', height: h }, '*');
+          }
+          window.addEventListener('load', sendHeight);
+          setTimeout(sendHeight, 300);
+          setTimeout(sendHeight, 1000);
+        </script>
+      </body>
+    </html>
+  `
+
+  useEffect(() => {
+    const handleMessage = (e: MessageEvent) => {
+      if (e.data && e.data.type === 'EMAIL_IFRAME_HEIGHT' && typeof e.data.height === 'number') {
+        setHeight(Math.min(Math.max(e.data.height, 150), 2000))
+      }
+    }
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [])
+
+  return (
+    <div className="w-full max-w-full overflow-hidden rounded-lg border border-base-800 bg-white">
+      <iframe
+        srcDoc={doc}
+        title="Email content"
+        sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin"
+        style={{ width: '100%', height: `${height}px`, border: 'none' }}
+      />
+    </div>
+  )
+}
+
 export function MailPage() {
   const queryClient = useQueryClient()
   const { addToast } = useToast()
@@ -26,6 +80,7 @@ export function MailPage() {
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [page, setPage] = useState(1)
   const [showAccountModal, setShowAccountModal] = useState(false)
   const [showComposer, setShowComposer] = useState(false)
 
@@ -57,12 +112,14 @@ export function MailPage() {
   })
   const accounts = accountsData?.accounts || []
 
-  // 2. Fetch Threads
+  // 2. Fetch Threads with Pagination
   const { data: threadsData, isLoading: loadingThreads } = useQuery({
-    queryKey: ['mail-threads', selectedCategory, searchQuery],
-    queryFn: () => mailService.getThreads({ category: selectedCategory, search: searchQuery }),
+    queryKey: ['mail-threads', selectedCategory, searchQuery, page],
+    queryFn: () => mailService.getThreads({ category: selectedCategory, search: searchQuery, page, limit: 15 }),
   })
   const threads = threadsData?.threads || []
+  const totalThreads = threadsData?.total || 0
+  const totalPages = threadsData?.totalPages || 1
 
   // 3. Fetch Selected Thread Details
   const { data: threadDetailsData, isLoading: loadingThreadDetails } = useQuery({
@@ -105,14 +162,16 @@ export function MailPage() {
   })
 
   const generateDraftMutation = useMutation({
-    mutationFn: (threadId: string) =>
-      mailService.generateDraft({
-        threadId,
-        preset: draftPreset,
-        tone: draftTone,
+    mutationFn: (overrideParams?: { threadId?: string; preset?: any; tone?: any }) => {
+      const targetThreadId = overrideParams?.threadId || selectedThreadId || ''
+      return mailService.generateDraft({
+        threadId: targetThreadId,
+        preset: overrideParams?.preset || draftPreset,
+        tone: overrideParams?.tone || draftTone,
         userInstruction,
         includeWorkspaceContext: includeContext,
-      }),
+      })
+    },
     onSuccess: (res) => {
       setComposedText(res.draft.draftBody)
       addToast('AI Draft generated!')
@@ -223,7 +282,10 @@ export function MailPage() {
               <button
                 key={cat.id}
                 type="button"
-                onClick={() => setSelectedCategory(cat.id)}
+                onClick={() => {
+                  setSelectedCategory(cat.id)
+                  setPage(1)
+                }}
                 className={cn(
                   'w-full flex items-center justify-between px-2.5 py-1.5 rounded-[4px] font-mono transition-all',
                   active ? 'bg-accent-muted text-accent font-medium' : 'text-base-400 hover:bg-base-800/40 hover:text-base-200'
@@ -284,13 +346,16 @@ export function MailPage() {
       </div>
 
       {/* 2. Middle Column: Thread List */}
-      <div className="w-full md:w-80 border-r border-sidebar-border bg-workspace flex flex-col shrink-0">
+      <div className="w-full md:w-80 border-r border-sidebar-border bg-workspace flex flex-col shrink-0 min-w-0">
         <div className="p-3 border-b border-sidebar-border space-y-2">
           <input
             type="text"
             placeholder="Search email threads..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value)
+              setPage(1)
+            }}
             className="w-full px-3 py-1.5 rounded bg-base-900 border border-base-800 text-base-200 placeholder:text-base-500 focus:outline-none focus:border-accent"
           />
 
@@ -333,7 +398,7 @@ export function MailPage() {
                   key={thread.id}
                   onClick={() => setSelectedThreadId(thread.id)}
                   className={cn(
-                    'p-3 cursor-pointer transition-colors space-y-1.5',
+                    'p-3 cursor-pointer transition-colors space-y-1.5 min-w-0',
                     selected ? 'bg-accent-muted/40 border-l-2 border-accent' : 'hover:bg-base-900/50',
                     !thread.isRead && 'font-bold'
                   )}
@@ -367,6 +432,33 @@ export function MailPage() {
             })
           )}
         </div>
+
+        {/* Pagination Bar */}
+        {totalPages > 1 && (
+          <div className="p-2 border-t border-sidebar-border bg-sidebar flex items-center justify-between text-[10px] text-base-400 shrink-0">
+            <span>
+              Page {page} of {totalPages}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-2 py-0.5 rounded bg-base-900 border border-base-800 text-base-300 hover:bg-base-800 disabled:opacity-40"
+              >
+                Prev
+              </button>
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="px-2 py-0.5 rounded bg-base-900 border border-base-800 text-base-300 hover:bg-base-800 disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 3. Right Column: Main Thread View & AI Composer */}
@@ -386,17 +478,17 @@ export function MailPage() {
         ) : (
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Header Toolbar */}
-            <div className="p-4 border-b border-sidebar-border bg-sidebar flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-bold text-base-100">{currentThread.subject}</h2>
-                <div className="text-[10px] text-base-400 flex items-center gap-2 mt-0.5">
+            <div className="p-4 border-b border-sidebar-border bg-sidebar flex items-center justify-between flex-wrap gap-2 min-w-0 shrink-0">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-sm font-bold text-base-100 truncate">{currentThread.subject}</h2>
+                <div className="text-[10px] text-base-400 flex items-center gap-2 mt-0.5 truncate">
                   <span>Account: {currentThread.account.email}</span>
                   <span>•</span>
                   <span>{currentThread.messages.length} message(s)</span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => categorizeMutation.mutate(currentThread.id)}
@@ -419,7 +511,7 @@ export function MailPage() {
             </div>
 
             {/* Main Content Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 min-w-0">
               {/* AI Executive Summary Card */}
               {currentThread.aiSummary && (
                 <div className="p-3.5 rounded-lg bg-gradient-to-r from-accent-muted/30 via-base-900 to-base-900 border border-accent/30 space-y-2">
@@ -448,24 +540,21 @@ export function MailPage() {
               )}
 
               {/* Message Chain */}
-              <div className="space-y-4">
+              <div className="space-y-4 min-w-0 max-w-full overflow-hidden">
                 {currentThread.messages.map((msg) => (
-                  <div key={msg.id} className="p-4 rounded-lg bg-base-900/60 border border-base-850 space-y-3">
-                    <div className="flex items-center justify-between border-b border-base-800/50 pb-2">
-                      <div>
-                        <div className="font-semibold text-base-100">{msg.fromName || msg.fromAddress}</div>
-                        <div className="text-[10px] text-base-500">To: {msg.toAddresses.join(', ')}</div>
+                  <div key={msg.id} className="p-4 rounded-lg bg-base-900/60 border border-base-850 space-y-3 min-w-0 max-w-full overflow-hidden">
+                    <div className="flex items-center justify-between border-b border-base-800/50 pb-2 flex-wrap gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-base-100 truncate">{msg.fromName || msg.fromAddress}</div>
+                        <div className="text-[10px] text-base-500 truncate">To: {msg.toAddresses.join(', ')}</div>
                       </div>
-                      <div className="text-[10px] text-base-500">{new Date(msg.sentAt).toLocaleString()}</div>
+                      <div className="text-[10px] text-base-500 shrink-0">{new Date(msg.sentAt).toLocaleString()}</div>
                     </div>
 
                     {msg.bodyHtml ? (
-                      <div
-                        className="text-base-300 leading-relaxed prose prose-invert max-w-none text-xs"
-                        dangerouslySetInnerHTML={{ __html: msg.bodyHtml }}
-                      />
+                      <EmailHtmlViewer html={msg.bodyHtml} />
                     ) : (
-                      <div className="text-base-300 leading-relaxed whitespace-pre-wrap font-sans text-xs">{msg.bodyText}</div>
+                      <div className="text-base-300 leading-relaxed whitespace-pre-wrap font-sans text-xs break-words [word-break:break-word] overflow-x-auto">{msg.bodyText}</div>
                     )}
                   </div>
                 ))}
@@ -489,7 +578,13 @@ export function MailPage() {
                       <label className="text-[10px] text-base-400 font-bold block mb-1">Preset Strategy</label>
                       <select
                         value={draftPreset}
-                        onChange={(e: any) => setDraftPreset(e.target.value)}
+                        onChange={(e: any) => {
+                          const newPreset = e.target.value
+                          setDraftPreset(newPreset)
+                          if (selectedThreadId) {
+                            generateDraftMutation.mutate({ threadId: selectedThreadId, preset: newPreset, tone: draftTone })
+                          }
+                        }}
                         className="w-full p-1.5 rounded bg-base-950 border border-base-800 text-base-200"
                       >
                         <option value="formal">Formal Response</option>
@@ -504,7 +599,13 @@ export function MailPage() {
                       <label className="text-[10px] text-base-400 font-bold block mb-1">Tone Selector</label>
                       <select
                         value={draftTone}
-                        onChange={(e: any) => setDraftTone(e.target.value)}
+                        onChange={(e: any) => {
+                          const newTone = e.target.value
+                          setDraftTone(newTone)
+                          if (selectedThreadId) {
+                            generateDraftMutation.mutate({ threadId: selectedThreadId, preset: draftPreset, tone: newTone })
+                          }
+                        }}
                         className="w-full p-1.5 rounded bg-base-950 border border-base-800 text-base-200"
                       >
                         <option value="professional">Professional</option>
@@ -541,12 +642,16 @@ export function MailPage() {
 
                   <button
                     type="button"
-                    onClick={() => generateDraftMutation.mutate(currentThread.id)}
+                    onClick={() => {
+                      if (selectedThreadId) {
+                        generateDraftMutation.mutate({ threadId: selectedThreadId })
+                      }
+                    }}
                     disabled={generateDraftMutation.isPending}
                     className="w-full py-1.5 rounded bg-accent/20 border border-accent/40 text-accent font-bold flex items-center justify-center gap-2 hover:bg-accent/30"
                   >
                     <Sparkles className={cn('size-4', generateDraftMutation.isPending && 'animate-spin')} />
-                    <span>{generateDraftMutation.isPending ? 'Generating AI Response...' : 'Generate AI Draft'}</span>
+                    <span>{generateDraftMutation.isPending ? 'Generating AI Response...' : 'Re-Generate AI Draft'}</span>
                   </button>
 
                   {/* Draft Editor Textarea */}
