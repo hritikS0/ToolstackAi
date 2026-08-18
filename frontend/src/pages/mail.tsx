@@ -61,12 +61,27 @@ function EmailHtmlViewer({ html }: { html: string }) {
     return () => window.removeEventListener('message', handleMessage)
   }, [])
 
+  const handleIframeLoad = (e: React.SyntheticEvent<HTMLIFrameElement>) => {
+    try {
+      const iframe = e.currentTarget
+      if (iframe.contentWindow?.document?.body) {
+        const h = iframe.contentWindow.document.body.scrollHeight
+        if (h && h > 100) {
+          setHeight(Math.min(Math.max(h, 150), 2000))
+        }
+      }
+    } catch {
+      // Ignore cross-origin fallback issues
+    }
+  }
+
   return (
     <div className="w-full max-w-full overflow-hidden rounded-lg border border-base-800 bg-white">
       <iframe
         srcDoc={doc}
         title="Email content"
-        sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin"
+        sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
+        onLoad={handleIframeLoad}
         style={{ width: '100%', height: `${height}px`, border: 'none' }}
       />
     </div>
