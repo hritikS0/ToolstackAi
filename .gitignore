@@ -10,3 +10,5 @@
 
 # Uploaded files (dev only, production uses Supabase)
 uploads/
+
+.DS_Store

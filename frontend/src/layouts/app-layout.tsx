@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/store/auth'
-import { PomodoroProvider } from '@/store/pomodoro'
 import { Sidebar } from '@/components/layout/sidebar'
 import { UserMenu } from '@/components/layout/user-menu'
 import { ThemeModal } from '@/components/theme/theme-modal'
@@ -11,6 +10,8 @@ import { Menu } from 'lucide-react'
 import { useEffect } from 'react'
 
 import { NotificationPanel } from '@/components/notifications/notification-panel'
+import { WorkspaceView } from '@/components/workspace/workspace-view'
+import { WorkspaceControls } from '@/components/workspace/workspace-controls'
 
 export function AppLayout() {
   const { isAuthenticated } = useAuth()
@@ -24,8 +25,7 @@ export function AppLayout() {
   if (!isAuthenticated) return <Navigate to={config.auth.loginPath} replace />
 
   return (
-    <PomodoroProvider>
-      <div className="h-dvh flex overflow-hidden bg-workspace">
+    <div className="h-dvh flex overflow-hidden bg-workspace">
         <div className="hidden md:block">
           <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(s => !s)} onThemeClick={() => setIsOpen(true)} />
         </div>
@@ -46,16 +46,16 @@ export function AppLayout() {
             </button>
             <div className="flex-1" />
             <div className="flex items-center gap-2">
+              <WorkspaceControls />
               <NotificationPanel />
               <UserMenu />
             </div>
           </div>
           <main className="flex-1 overflow-hidden">
-            <Outlet />
+            <WorkspaceView />
           </main>
         </div>
         <ThemeModal />
       </div>
-    </PomodoroProvider>
   )
 }

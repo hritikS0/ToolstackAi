@@ -50,8 +50,9 @@ const STARTERS = [
   }
 ]
 
-export function ChatPage() {
-  const { id } = useParams()
+export function ChatPage({ conversationId }: { conversationId?: string } = {}) {
+  const { id: paramId } = useParams()
+  const id = conversationId ?? paramId
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -86,6 +87,7 @@ export function ChatPage() {
   })
   const thinkingMsgInterval = useRef<ReturnType<typeof setInterval> | null>(null)
   const prevIdRef = useRef(id)
+  const sentMessageCountRef = useRef<number | null>(null)
 
   const [streamingSources, setStreamingSources] = useState<{ title: string; url: string; description?: string }[] | null>(null)
 
@@ -225,6 +227,7 @@ export function ChatPage() {
     const isDocChat = !!activeConv?.storagePath || activeConv?.type === 'pdf'
 
     if (isDocChat) {
+      sentMessageCountRef.current = (messages as Message[]).length
       setOptimisticUserMsg(msg)
       try {
         const res = await pdfService.chat({ message: msg, documentId: convId })
@@ -242,6 +245,7 @@ export function ChatPage() {
         if (thinkingRef.current.timerId) clearTimeout(thinkingRef.current.timerId)
         thinkingRef.current.active = false
         setIsThinking(false)
+        sentMessageCountRef.current = null
         await queryClient.refetchQueries({ queryKey: ['messages', convId] })
         setOptimisticUserMsg(null)
         setStreamingContent('')
@@ -257,6 +261,7 @@ export function ChatPage() {
     if (attachedImage) {
       const imgPreview = attachedImage.preview
       console.log('[chat] optimistic user msg (image)', msg)
+      sentMessageCountRef.current = (messages as Message[]).length
       setOptimisticUserMsg(msg)
       setLocalImagePreviews(prev => ({ ...prev, [msg]: imgPreview }))
       setAttachedImage(null)
@@ -282,6 +287,7 @@ export function ChatPage() {
         if (thinkingRef.current.timerId) clearTimeout(thinkingRef.current.timerId)
         thinkingRef.current.active = false
         setIsThinking(false)
+        sentMessageCountRef.current = null
         await queryClient.refetchQueries({ queryKey: ['messages', convId] })
         setOptimisticUserMsg(null)
         setStreamingContent('')
@@ -292,6 +298,7 @@ export function ChatPage() {
     }
 
     console.log('[chat] optimistic user msg', msg)
+    sentMessageCountRef.current = (messages as Message[]).length
     setOptimisticUserMsg(msg)
     let fullContent = ''
     let failed = false
@@ -343,8 +350,8 @@ export function ChatPage() {
       if (fullContent) setStreamingContent(fullContent)
       if (failed && !fullContent) setStreamingContent('')
 
-      // Await refetch then clear live UI — same as vision/PDF. Invalidating without clearing
-      // optimisticUserMsg can put the server assistant above the optimistic user bubble.
+      // Await refetch then clear live UI
+      sentMessageCountRef.current = null
       await queryClient.refetchQueries({ queryKey: ['messages', convId] })
       setOptimisticUserMsg(null)
       setStreamingContent('')
@@ -409,6 +416,7 @@ export function ChatPage() {
   useEffect(() => {
     if (prevIdRef.current !== id) {
       prevIdRef.current = id
+      sentMessageCountRef.current = null
       if (!isStreaming) {
         setOptimisticUserMsg(null)
         setStreamingContent('')
@@ -582,17 +590,7 @@ export function ChatPage() {
               </div>
             ) : (
               <div className="max-w-4xl mx-auto py-5 px-5 space-y-5">
-                {(messages as Message[]).filter((m, idx, arr) => {
-                  if (optimisticUserMsg && m.role === 'user' && m.content === optimisticUserMsg) return false
-                  if (streamingContent && m.role === 'assistant' && m.content === streamingContent) return false
-                  // While the optimistic user bubble is still mounted, hide the trailing
-                  // server assistant so a content mismatch can't place it above the user.
-                  if (optimisticUserMsg && m.role === 'assistant') {
-                    const lastAssistantIdx = arr.reduce((last, msg, i) => msg.role === 'assistant' ? i : last, -1)
-                    if (idx === lastAssistantIdx) return false
-                  }
-                  return true
-                }).map(msg => (
+                {(messages as Message[]).map(msg => (
                   <MessageBlock
                     key={msg.id}
                     role={msg.role as 'user' | 'assistant'}
@@ -604,7 +602,7 @@ export function ChatPage() {
                   />
                 ))}
 
-                {optimisticUserMsg && (
+                {optimisticUserMsg && (sentMessageCountRef.current === null || (messages as Message[]).length <= sentMessageCountRef.current) && (
                   <MessageBlock
                     key="optimistic-user"
                     role="user"
@@ -613,7 +611,7 @@ export function ChatPage() {
                   />
                 )}
 
-                {(isStreaming || streamingContent) && (
+                {(isStreaming || streamingContent) && (sentMessageCountRef.current === null || (messages as Message[]).length <= sentMessageCountRef.current) && (
                   <MessageBlock
                     key="live-response"
                     role="assistant"

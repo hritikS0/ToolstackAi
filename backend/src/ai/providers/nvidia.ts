@@ -44,7 +44,7 @@ async function chatCompletion(
   const model =
     options.model ||
     process.env.NVIDIA_CHAT_MODEL ||
-    "meta/llama-3.1-8b-instruct";
+    "meta/llama-3.2-11b-vision-instruct";
   const temperature = options.temperature ?? 0.7;
   const maxTokens = options.maxTokens ?? 1024;
 
@@ -77,7 +77,7 @@ async function* chatCompletionStream(
   options: ChatCompletionOptions = {},
 ): AsyncGenerator<string, void, unknown> {
   const apiKey = options.apiKey || getApiKey();
-  const model = options.model || process.env.NVIDIA_CHAT_MODEL || "meta/llama-3.1-8b-instruct";
+  const model = options.model || process.env.NVIDIA_CHAT_MODEL || "meta/llama-3.2-11b-vision-instruct";
   const temperature = options.temperature ?? 0.7;
   const maxTokens = options.maxTokens ?? 1024;
 

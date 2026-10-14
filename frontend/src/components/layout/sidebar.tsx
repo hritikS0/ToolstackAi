@@ -5,34 +5,42 @@ import { cn } from '@/lib/utils'
 import {
   MessageSquare, History, Settings, Mail,
   PanelLeftClose, PanelLeft, Palette, BrainCircuit, Images,
-  ChevronDown, ChevronRight, Plus, Trophy, CheckSquare, Flame, StickyNote, FolderOpen, Timer,
-  Pin, Trash2, Loader2, MoreHorizontal
+  ChevronDown, ChevronRight, Plus, Trophy, CheckSquare, Flame, StickyNote, FolderOpen,
+  Pin, Trash2, Loader2, MoreHorizontal, Columns2, GripVertical
 } from 'lucide-react'
 import { chatService } from '@/services/chat.service'
 import { Dialog } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
 import type { Conversation } from '@/types/api'
+import { useWorkspaceLayout } from '@/store/workspace-layout'
+import type { ToolId } from '@/components/workspace/panel-registry'
 
-const navItems = [
-  { icon: Mail, label: 'Mail', path: '/mail' },
-  { icon: CheckSquare, label: 'Tasks', path: '/tasks' },
-  { icon: Flame, label: 'Habits', path: '/habits' },
-  { icon: FolderOpen, label: 'Projects', path: '/projects' },
-  { icon: StickyNote, label: 'Notes', path: '/notes' },
-  { icon: Timer, label: 'Pomodoro', path: '/pomodoro' },
-  { icon: Trophy, label: 'Goals', path: '/goals' },
-  // { icon: Image, label: 'Image Analysis', path: '/image' },
-  { icon: Images, label: 'Media', path: '/media' },
-  // { icon: Bug, label: 'Debug', path: '/debug' },
-  { icon: BrainCircuit, label: 'Brain', path: '/brain' },
-  { icon: History, label: 'History', path: '/conversations' },
-  { icon: Settings, label: 'Settings', path: '/settings' },
+const navItems: { id: ToolId; icon: any; label: string; path: string }[] = [
+  { id: 'mail', icon: Mail, label: 'Mail', path: '/mail' },
+  { id: 'tasks', icon: CheckSquare, label: 'Tasks', path: '/tasks' },
+  { id: 'habits', icon: Flame, label: 'Habits', path: '/habits' },
+  { id: 'projects', icon: FolderOpen, label: 'Projects', path: '/projects' },
+  { id: 'notes', icon: StickyNote, label: 'Notes', path: '/notes' },
+  { id: 'goals', icon: Trophy, label: 'Goals', path: '/goals' },
+  { id: 'media', icon: Images, label: 'Media', path: '/media' },
+  { id: 'brain', icon: BrainCircuit, label: 'Brain', path: '/brain' },
+  { id: 'conversations', icon: History, label: 'History', path: '/conversations' },
+  { id: 'settings', icon: Settings, label: 'Settings', path: '/settings' },
 ]
 
 export function Sidebar({ collapsed, onToggle, onThemeClick }: { collapsed: boolean; onToggle: () => void; onThemeClick: () => void }) {
   const location = useLocation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { isSplitActive, activePanelId, replaceTool, openInSplit, setIsDraggingTool } = useWorkspaceLayout()
+
+  const handleToolClick = (path: string, toolId: ToolId) => {
+    if (isSplitActive && activePanelId) {
+      replaceTool(activePanelId, toolId)
+    } else {
+      navigate(path)
+    }
+  }
 
   const [chatExpanded, setChatExpanded] = useState(true)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
@@ -140,18 +148,28 @@ export function Sidebar({ collapsed, onToggle, onThemeClick }: { collapsed: bool
               <div 
                 role="button"
                 tabIndex={0}
-                onClick={() => navigate('/chat')}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('application/x-toolstack-tool', 'chat')
+                  e.dataTransfer.setData('text/plain', 'chat')
+                  e.dataTransfer.effectAllowed = 'copyMove'
+                  setIsDraggingTool(true, 'chat')
+                }}
+                onDragEnd={() => setIsDraggingTool(false)}
+                onClick={() => handleToolClick('/chat', 'chat')}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
-                    navigate('/chat')
+                    handleToolClick('/chat', 'chat')
                   }
                 }}
                 className={cn(
                   "group flex items-center justify-between h-7 px-2 rounded-[4px] text-[11px] font-semibold text-base-400 hover:text-base-200 hover:bg-base-800/40 cursor-pointer select-none transition-colors focus:outline-none focus:ring-1 focus:ring-accent-muted",
                   location.pathname === '/chat' && "bg-base-800/60 text-base-100"
                 )}
+                title="Click to open • Drag to split screen"
               >
                 <div className="flex items-center gap-1.5 min-w-0">
+                  <GripVertical className="size-2.5 text-base-600 opacity-0 group-hover:opacity-100 -ml-0.5 transition-opacity cursor-grab shrink-0" />
                   <button 
                     type="button"
                     onClick={(e) => {
@@ -165,14 +183,27 @@ export function Sidebar({ collapsed, onToggle, onThemeClick }: { collapsed: bool
                   <MessageSquare className="size-3.5 text-base-400" />
                   <span className="font-mono truncate uppercase tracking-wider">Chat</span>
                 </div>
-                <button 
-                  type="button"
-                  onClick={handleNewChat}
-                  className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-base-700 text-base-400 hover:text-accent transition-all"
-                  title="New Chat"
-                >
-                  <Plus className="size-3" />
-                </button>
+                <div className="flex items-center gap-0.5">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      openInSplit('chat')
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-base-700 text-base-400 hover:text-accent transition-all"
+                    title="Open Chat in Split View"
+                  >
+                    <Columns2 className="size-3" />
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={handleNewChat}
+                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-base-700 text-base-400 hover:text-accent transition-all"
+                    title="New Chat"
+                  >
+                    <Plus className="size-3" />
+                  </button>
+                </div>
               </div>
 
               {chatExpanded && (
@@ -285,20 +316,35 @@ export function Sidebar({ collapsed, onToggle, onThemeClick }: { collapsed: bool
         ) : (
           /* Collapsed Icons for Chat */
           <div className="space-y-1.5">
-            <button type="button"
-              onClick={() => navigate('/chat')}
+            <div
+              role="button"
+              tabIndex={0}
+              draggable={true}
+              onDragStart={(e) => {
+                e.dataTransfer.setData('application/x-toolstack-tool', 'chat')
+                e.dataTransfer.setData('text/plain', 'chat')
+                e.dataTransfer.effectAllowed = 'copyMove'
+                setIsDraggingTool(true, 'chat')
+              }}
+              onDragEnd={() => setIsDraggingTool(false, null)}
+              onClick={() => handleToolClick('/chat', 'chat')}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  handleToolClick('/chat', 'chat')
+                }
+              }}
               className={cn(
-                'flex items-center justify-center w-full h-10 text-sm transition-colors relative group',
+                'flex items-center justify-center w-full h-10 text-sm transition-colors cursor-grab active:cursor-grabbing relative group select-none',
                 currentPath === '/chat' ? 'text-base-100 bg-accent-muted' : 'text-base-400 hover:text-base-200 hover:bg-base-800/50'
               )}
-              title="Chat"
+              title="Chat • Drag to split screen"
             >
               <MessageSquare className="size-4 shrink-0" />
               <div className="absolute rounded-full bg-accent left-0.5 top-1/2 -translate-y-1/2 w-0.5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
               <div className="absolute left-full ml-2 px-2 py-1 rounded-[4px] bg-base-900 border border-base-800 text-[13px] text-base-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 pointer-events-none">
                 Chat
               </div>
-            </button>
+            </div>
           </div>
         )}
 
@@ -307,20 +353,42 @@ export function Sidebar({ collapsed, onToggle, onThemeClick }: { collapsed: bool
           {navItems.map(item => {
             const active = currentPath === item.path
             return (
-              <button type="button"
+              <div
                 key={item.path}
-                onClick={() => navigate(item.path)}
+                role="button"
+                tabIndex={0}
+                draggable={true}
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('application/x-toolstack-tool', item.id)
+                  e.dataTransfer.setData('text/plain', item.id)
+                  e.dataTransfer.effectAllowed = 'copyMove'
+                  setIsDraggingTool(true, item.id)
+                }}
+                onDragEnd={() => setIsDraggingTool(false, null)}
+                onClick={() => handleToolClick(item.path, item.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    handleToolClick(item.path, item.id)
+                  }
+                }}
                 className={cn(
-                  'flex items-center gap-2.5 w-full text-sm transition-colors relative group',
-                  collapsed ? 'justify-center h-10' : 'px-3 h-9 rounded-[4px]',
+                  'group relative flex items-center w-full text-sm transition-colors cursor-grab active:cursor-grabbing select-none',
+                  collapsed ? 'justify-center h-10' : 'px-2.5 h-9 rounded-[4px]',
                   active
                     ? 'text-base-100 bg-accent-muted'
                     : 'text-base-400 hover:text-base-200 hover:bg-base-800/50',
                 )}
-                title={collapsed ? item.label : undefined}
+                title={collapsed ? `${item.label} • Drag to split` : 'Click to open • Drag to split screen'}
               >
+                {!collapsed && (
+                  <GripVertical className="size-3 text-base-600 opacity-0 group-hover:opacity-100 -ml-1 mr-1 transition-opacity shrink-0" />
+                )}
                 <item.icon className="size-4 shrink-0" />
-                {!collapsed && <span className="truncate text-[13px] font-mono tracking-wide">{item.label}</span>}
+                {!collapsed && (
+                  <span className="truncate text-[13px] font-mono tracking-wide flex-1 text-left ml-2">
+                    {item.label}
+                  </span>
+                )}
                 {active && (
                   <span className={cn(
                     'absolute rounded-full bg-accent',
@@ -332,7 +400,21 @@ export function Sidebar({ collapsed, onToggle, onThemeClick }: { collapsed: bool
                     {item.label}
                   </div>
                 )}
-              </button>
+
+                {!collapsed && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      openInSplit(item.id)
+                    }}
+                    className="absolute right-1 size-6 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-base-700 text-base-400 hover:text-accent transition-all z-10"
+                    title={`Open ${item.label} side-by-side in split panel`}
+                  >
+                    <Columns2 className="size-3" />
+                  </button>
+                )}
+              </div>
             )
           })}
         </div>

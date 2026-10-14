@@ -1,9 +1,11 @@
 import { createContext, useContext, useCallback, useEffect, useMemo, useState, useRef, type ReactNode, type Dispatch, type SetStateAction } from 'react'
+import { useLocation } from 'react-router-dom'
 import type { ThemeConfig } from '@/themes/types'
 import { builtinThemes, getThemeById } from '@/themes/themes'
 import { hexToRgb } from '@/themes/utils'
 
 const STORAGE_KEY = 'toolstack-theme'
+const PUBLIC_ROUTES = ['/', '/login', '/register']
 
 interface ThemeContextType {
   theme: ThemeConfig
@@ -86,8 +88,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
   const openRef = useRef(isOpen)
   openRef.current = isOpen
+  const location = useLocation()
+  const isPublicRoute = PUBLIC_ROUTES.includes(location.pathname)
 
-  useEffect(() => { applyTheme(theme) }, [theme])
+  useEffect(() => {
+    if (isPublicRoute) {
+      applyTheme(defaultTheme)
+    } else {
+      applyTheme(theme)
+    }
+  }, [theme, isPublicRoute])
 
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(theme)) } catch {}
@@ -95,6 +105,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (isPublicRoute) return
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'T' && !isInputTarget(e)) {
         e.preventDefault()
         setIsOpen(!openRef.current)
@@ -102,7 +113,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [])
+  }, [isPublicRoute])
 
   const resetTheme = useCallback(() => {
     setTheme(defaultTheme)

@@ -311,7 +311,7 @@ export async function generateAiResponse(
       tokensUsed += secondCompletion.usage?.total_tokens || 0;
     }
 
-    trackUsage({ userId, provider: "nvidia", model: process.env.NVIDIA_CHAT_MODEL || "meta/llama-3.1-8b-instruct", tokens: tokensUsed, cost: 0 }).catch(() => { });
+    trackUsage({ userId, provider: "nvidia", model: process.env.NVIDIA_CHAT_MODEL || "meta/llama-3.2-11b-vision-instruct", tokens: tokensUsed, cost: 0 }).catch(() => { });
     logger.info({ aiContent: aiContent.slice(0, 500), tokensUsed, usedUserKey }, "generateAiResponse raw response");
   } catch (err) {
     handleAIError(err, "nvidia");
@@ -493,7 +493,7 @@ export async function* streamAiResponse(
   trackUsage({
     userId,
     provider: "nvidia",
-    model: process.env.NVIDIA_CHAT_MODEL || "meta/llama-3.1-8b-instruct",
+    model: process.env.NVIDIA_CHAT_MODEL || "meta/llama-3.2-11b-vision-instruct",
     tokens: tokensUsed,
     cost: 0,
   }).catch(() => { });

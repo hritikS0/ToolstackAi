@@ -30,7 +30,7 @@ export async function analyzeImageService(
 ): Promise<ImageAnalysisResult> {
   const prisma = getPrismaClient();
   const apiKey = await getApiKeyForUser(userId);
-  const model = process.env.NVIDIA_VISION_MODEL || "nvidia/nemotron-nano-12b-v2-vl";
+  const model = process.env.NVIDIA_VISION_MODEL || "meta/llama-3.2-11b-vision-instruct";
 
   const fileBuffer = await fs.readFile(file.path);
   const base64Image = fileBuffer.toString("base64");

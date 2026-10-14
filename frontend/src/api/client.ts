@@ -1,5 +1,6 @@
 import axios, { type AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios'
 import { config as appConfig } from '@/config'
+import { triggerToast } from '@/components/ui/toast'
 
 const apiClient = axios.create({
   baseURL: appConfig.api.baseUrl,
@@ -23,6 +24,19 @@ apiClient.interceptors.response.use(
       localStorage.removeItem(appConfig.auth.tokenKey)
       localStorage.removeItem(appConfig.auth.userKey)
       window.location.href = appConfig.auth.loginPath
+    } else if (!error.response && error.code === 'ERR_NETWORK') {
+      triggerToast({
+        type: 'error',
+        title: 'Network Error',
+        message: 'Unable to connect to the backend server. Please verify your connection or ensure the server is running.',
+      })
+    } else if (error.response && error.response.status >= 500) {
+      const serverMsg = (error.response.data as any)?.message || 'An unexpected internal server error occurred.'
+      triggerToast({
+        type: 'error',
+        title: `Server Error (${error.response.status})`,
+        message: serverMsg,
+      })
     }
     return Promise.reject(error)
   },
