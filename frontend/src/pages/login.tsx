@@ -22,7 +22,7 @@ export function LoginPage() {
     setError('')
     try {
       await login(email, password)
-      toast.success('Signed in successfully!')
+      toast.success('Signed in! Powered by NVIDIA Llama 3.2 11B (configurable in Settings).', 'Welcome back!')
       navigate(config.auth.dashboardPath)
     } catch (err: any) {
       const errMsg = err.response?.data?.message || err.message || 'Invalid email or password'

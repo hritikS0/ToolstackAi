@@ -32,14 +32,26 @@ export function Sidebar({ collapsed, onToggle, onThemeClick }: { collapsed: bool
   const location = useLocation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { isSplitActive, activePanelId, replaceTool, openInSplit, setIsDraggingTool } = useWorkspaceLayout()
+  const { isSplitActive, activePanelId, allPanels, setActivePanel, replaceTool, openInSplit, setIsDraggingTool } = useWorkspaceLayout()
 
   const handleToolClick = (path: string, toolId: ToolId) => {
-    if (isSplitActive && activePanelId) {
-      replaceTool(activePanelId, toolId)
-    } else {
-      navigate(path)
+    if (isSplitActive) {
+      // 1. If tool is already open in one of the split panels, give it first priority (focus it)!
+      const existingPanel = allPanels.find(p => p.toolId === toolId)
+      if (existingPanel) {
+        setActivePanel(existingPanel.id)
+        return
+      }
+
+      // 2. Otherwise, replace the active panel (or default to the first priority primary panel)
+      const targetPanelId = activePanelId || allPanels[0]?.id
+      if (targetPanelId) {
+        replaceTool(targetPanelId, toolId)
+        setActivePanel(targetPanelId)
+        return
+      }
     }
+    navigate(path)
   }
 
   const [chatExpanded, setChatExpanded] = useState(true)
@@ -47,7 +59,10 @@ export function Sidebar({ collapsed, onToggle, onThemeClick }: { collapsed: bool
   const [contextMenuId, setContextMenuId] = useState<string | null>(null)
   const { addToast } = useToast()
 
-  const currentPath = '/' + location.pathname.split('/').filter(Boolean)[0]
+  const activePanel = allPanels.find(p => p.id === activePanelId) || allPanels[0]
+  const currentPath = isSplitActive && activePanel
+    ? '/' + activePanel.toolId
+    : '/' + location.pathname.split('/').filter(Boolean)[0]
   const activeSubId = location.pathname.split('/')[2]
 
   const PAGE_SIZE = 20
@@ -217,9 +232,35 @@ export function Sidebar({ collapsed, onToggle, onThemeClick }: { collapsed: bool
                         <div
                           role="button"
                           tabIndex={0}
-                          onClick={() => navigate(`/chat/${c.id}`)}
+                          onClick={() => {
+                            if (isSplitActive) {
+                              const chatPanel = allPanels.find(p => p.toolId === 'chat')
+                              if (chatPanel) {
+                                setActivePanel(chatPanel.id)
+                              } else {
+                                const targetPanelId = activePanelId || allPanels[0]?.id
+                                if (targetPanelId) {
+                                  replaceTool(targetPanelId, 'chat')
+                                  setActivePanel(targetPanelId)
+                                }
+                              }
+                            }
+                            navigate(`/chat/${c.id}`)
+                          }}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
+                              if (isSplitActive) {
+                                const chatPanel = allPanels.find(p => p.toolId === 'chat')
+                                if (chatPanel) {
+                                  setActivePanel(chatPanel.id)
+                                } else {
+                                  const targetPanelId = activePanelId || allPanels[0]?.id
+                                  if (targetPanelId) {
+                                    replaceTool(targetPanelId, 'chat')
+                                    setActivePanel(targetPanelId)
+                                  }
+                                }
+                              }
                               navigate(`/chat/${c.id}`)
                             }
                           }}

@@ -52,10 +52,12 @@ export function PanelContainer({ node }: PanelContainerProps) {
   return (
     <div
       ref={containerRef}
+      onPointerDownCapture={() => setActivePanel(node.id)}
+      onFocusCapture={() => setActivePanel(node.id)}
       onClick={() => setActivePanel(node.id)}
       className={cn(
         'relative flex flex-col h-full w-full min-h-0 min-w-0 bg-workspace overflow-hidden border transition-colors',
-        isActive ? 'border-accent/40 shadow-[0_0_0_1px_rgba(245,158,11,0.15)]' : 'border-base-800/80'
+        isActive ? 'border-accent/40 shadow-[0_0_0_1px_rgba(245,158,11,0.2)]' : 'border-base-800/80'
       )}
     >
       {/* Drop feedback overlay */}
@@ -68,8 +70,21 @@ export function PanelContainer({ node }: PanelContainerProps) {
       )}
 
       {/* Panel Top Title Bar */}
-      <div className="h-8 px-2 bg-surface/90 border-b border-base-800 flex items-center justify-between shrink-0 select-none z-20">
+      <div
+        className={cn(
+          "h-8 px-2 border-b flex items-center justify-between shrink-0 select-none z-20 transition-all",
+          isActive
+            ? "bg-base-900 border-accent/40"
+            : "bg-surface/60 border-base-800 opacity-80 hover:opacity-100"
+        )}
+      >
         <div className="flex items-center gap-1.5 min-w-0">
+          {isActive && (
+            <span
+              className="size-1.5 rounded-full bg-accent animate-pulse shrink-0"
+              title="Active Focus (First Priority)"
+            />
+          )}
           <div
             className="cursor-grab active:cursor-grabbing text-base-500 hover:text-base-300 p-0.5 rounded"
             title="Panel Handle"

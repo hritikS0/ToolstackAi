@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Send, Loader2, ImagePlus, X, Square, FileText } from 'lucide-react'
+import { Send, Loader2, ImagePlus, X, Square, FileText, ArrowRight } from 'lucide-react'
 
 interface ComposerProps {
   value: string
@@ -109,6 +109,20 @@ export function Composer({ value, onChange, onSend, onStop, disabled, placeholde
               </Button>
             )}
           </div>
+        </div>
+
+        <div className="flex items-center justify-between mt-2 px-1 text-[11px] font-mono text-base-500">
+          <div className="flex items-center gap-1.5">
+            <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Model: <span className="text-base-300 font-medium">NVIDIA Llama 3.2 11B Vision</span></span>
+          </div>
+          <a
+            href="/settings"
+            className="text-base-500 hover:text-accent transition-colors flex items-center gap-1 font-mono"
+            title="Configure API Keys & Models"
+          >
+            Change in Settings <ArrowRight className="size-3" />
+          </a>
         </div>
       </div>
     </div>

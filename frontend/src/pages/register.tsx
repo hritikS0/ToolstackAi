@@ -31,7 +31,7 @@ export function RegisterPage() {
 
     try {
       const welcomeId = await register(email, password, fullName)
-      toast.success('Account created successfully!', 'Welcome to ToolStackAI')
+      toast.success('Account created! Default model: NVIDIA Llama 3.2 11B (configurable in Settings).', 'Welcome to ToolStackAI')
       if (welcomeId) {
         navigate(`/chat/${welcomeId}`)
       } else {

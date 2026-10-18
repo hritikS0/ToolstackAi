@@ -11,17 +11,18 @@ ToolStackAI is your **AI-powered developer operating system** — chat with AI, 
 
 ---
 
-## 🚀 Getting Started
+## ⚡ Active AI Model
+> **Currently Active:** **NVIDIA NIM** running \`meta/llama-3.2-11b-vision-instruct\` (Vision & Text Reasoning).  
+> You can start chatting immediately!
 
-### Connect an AI Provider
-ToolStackAI supports multiple AI providers. Start by adding your API key:
-
-- **NVIDIA NIM** (free tier) — Recommended for getting started
-- **OpenAI** — GPT-4o, GPT-4.1
-- **Anthropic** — Claude 3.5 Sonnet, Claude Opus
-- **DeepSeek** — DeepSeek V3, DeepSeek R1
-- **Google** — Gemini 2.0 Flash, Gemini 2.5 Pro
-- **OpenRouter** — Access all providers through one API
+### ⚙️ Want to change models or bring your own API key?
+You can change your AI provider and keys anytime in **[Settings → API Keys](/settings)**:
+- **NVIDIA NIM** (Default active model)
+- **OpenAI** (GPT-4o, GPT-4.1)
+- **Anthropic** (Claude 3.5 Sonnet, Claude Opus)
+- **DeepSeek** (DeepSeek V3, DeepSeek R1)
+- **Google** (Gemini 2.0 Flash, Gemini 2.5 Pro)
+- **OpenRouter** (Unified multi-provider API)
 
 ---
 

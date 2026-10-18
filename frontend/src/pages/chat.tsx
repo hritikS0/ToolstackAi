@@ -497,6 +497,17 @@ export function ChatPage({ conversationId }: { conversationId?: string } = {}) {
                 </span>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => navigate('/settings')}
+                  className="flex items-center gap-1.5 h-7 px-2.5 rounded-[4px] border border-base-750 bg-base-900/60 text-base-400 hover:text-base-200 hover:border-accent/40 hover:bg-base-900 transition-all text-[11px] font-mono cursor-pointer"
+                  title="Active Model: NVIDIA Llama 3.2 11B Vision. Click to change provider or keys in Settings."
+                >
+                  <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-base-300 font-medium">NVIDIA Llama 3.2 11B</span>
+                  <span className="text-base-500 hidden sm:inline">• Change in Settings</span>
+                  <ArrowRight className="size-3 text-base-500 hidden sm:inline" />
+                </button>
                 {isDocument && (
                   <button
                     type="button"
@@ -560,9 +571,22 @@ export function ChatPage({ conversationId }: { conversationId?: string } = {}) {
                     New Chat Session
                   </h1>
                   
-                  <p className="text-[13px] text-base-400 max-w-md mb-8 leading-relaxed font-mono">
+                  <p className="text-[13px] text-base-400 max-w-md mb-6 leading-relaxed font-mono">
                     Ask a question, paste code to debug, or try one of the quick starters below to begin.
                   </p>
+
+                  <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-base-800 bg-base-950/90 mb-7 text-[11px] font-mono text-base-400 max-w-lg shadow-sm">
+                    <span className="size-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                    <span className="truncate">Active Model: <strong className="text-base-200">NVIDIA Llama 3.2 11B Vision</strong></span>
+                    <span className="text-base-600">•</span>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/settings')}
+                      className="text-accent hover:underline flex items-center gap-1 font-medium shrink-0 cursor-pointer"
+                    >
+                      Change in Settings <ArrowRight className="size-3" />
+                    </button>
+                  </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
                     {STARTERS.map((starter, index) => {
