@@ -176,9 +176,34 @@ async function getUserApiKey(userId: string): Promise<string | null> {
   return getUserKey(userId, "nvidia");
 }
 
-async function buildMessages(history: { role: string; content: string }[], userId: string, searchContext?: string, currentConversationId?: string) {
+export function hasWorkspaceActionIntent(message: string): boolean {
+  const lower = message.toLowerCase();
+  return (
+    /\b(create|add|make|new|schedule)\s+(a\s+)?(task|todo|habit|routine|goal|milestone|project)\b/i.test(lower) ||
+    /\b(mark|set|check|complete)\s+.*(done|completed|finished)\b/i.test(lower) ||
+    /\b(reopen|unmark|undo)\s+.*(task|todo)\b/i.test(lower) ||
+    /\b(update|change)\s+.*(status|priority)\b/i.test(lower) ||
+    /\b(remember|save to memory|remind me|note that down|don't forget)\b/i.test(lower)
+  );
+}
+
+export function isWorkspaceQuery(message: string): boolean {
+  const lower = message.toLowerCase();
+  return (
+    hasWorkspaceActionIntent(message) ||
+    /\b(my tasks?|my habits?|my goals?|my projects?|what are my tasks|what should i do today|overdue|workspace)\b/i.test(lower)
+  );
+}
+
+async function buildMessages(
+  history: { role: string; content: string }[],
+  userId: string,
+  searchContext?: string,
+  currentConversationId?: string,
+  includeWorkspaceContext = true,
+) {
   const memoryContext = await getCachedMemoryContext(userId);
-  const workspaceContext = await getWorkspaceContext(userId);
+  const workspaceContext = includeWorkspaceContext ? await getWorkspaceContext(userId) : "";
   const recentConversationsContext = await getCachedConversationsContext(userId, currentConversationId);
   let systemPrompt = chatSystemPrompt(memoryContext, workspaceContext, recentConversationsContext);
 
@@ -378,8 +403,9 @@ export async function* streamAiResponse(
   const webSearchEnabled = !!(toolsConfig?.webSearch);
   let searchContext = "";
 
-  // Perform web search if enabled
-  if (webSearchEnabled && !isConversationalFiller(message)) {
+  // Perform web search if enabled and not a code snippet or conversational filler
+  const isCode = /```|^\s*(function|const|let|var|class|import|def|public|private)\b|=>|\{|\}/m.test(message);
+  if (webSearchEnabled && !isConversationalFiller(message) && !isCode) {
     try {
       const searchCount = await getSearchCountThisMonth(prisma);
       if (searchCount >= 250) {
@@ -421,7 +447,8 @@ export async function* streamAiResponse(
   });
   history.reverse();
 
-  const messages = await buildMessages(history, userId, searchContext, conversationId);
+  const workspaceRelevant = isWorkspaceQuery(message);
+  const messages = await buildMessages(history, userId, searchContext, conversationId, workspaceRelevant);
 
   logger.info({ conversationId, history: buildHistory(history) }, "streamAiResponse messages");
 
@@ -434,47 +461,55 @@ export async function* streamAiResponse(
     const userKey = await getUserApiKey(userId);
     usedUserKey = !!userKey;
 
-    // Pass 1: Run non-streaming to check for tool calls
-    const completion = await nvidia.chatCompletion(messages, userKey ? { apiKey: userKey } : {});
-    const pass1Content = (completion.choices[0]?.message?.content || "")
-      .replace(/\[SYSTEM ACTION\][\s\S]*?\[END SYSTEM ACTION\]\s*/gi, '').trim();
-    tokensUsed = completion.usage?.total_tokens || 0;
+    const needsToolPass = hasWorkspaceActionIntent(message);
 
-    const toolCalls = parseToolCalls(pass1Content);
+    if (needsToolPass) {
+      // Pass 1: Run non-streaming only when user explicitly asks for workspace actions (create task, habit, etc.)
+      const completion = await nvidia.chatCompletion(messages, userKey ? { apiKey: userKey } : {});
+      const pass1Content = (completion.choices[0]?.message?.content || "")
+        .replace(/\[SYSTEM ACTION\][\s\S]*?\[END SYSTEM ACTION\]\s*/gi, '').trim();
+      tokensUsed = completion.usage?.total_tokens || 0;
 
-    if (toolCalls.length > 0) {
-      // Execute the tools
-      const results: string[] = [];
-      for (const tc of toolCalls) {
-        const toolResult = await executeToolCall(tc.name, tc.params, userId);
-        const resultText = `[${toolResult.success ? '✓' : '✗'}] ${toolResult.message}`;
-        results.push(resultText);
+      const toolCalls = parseToolCalls(pass1Content);
+
+      if (toolCalls.length > 0) {
+        // Execute the tools
+        const results: string[] = [];
+        for (const tc of toolCalls) {
+          const toolResult = await executeToolCall(tc.name, tc.params, userId);
+          const resultText = `[${toolResult.success ? '✓' : '✗'}] ${toolResult.message}`;
+          results.push(resultText);
+        }
+        const formattedExecutionResults = results.join('\n');
+        workspaceCache.delete(userId);
+
+        // Construct messages for Second Pass
+        const secondPassMessages = [
+          ...messages,
+          { role: "assistant" as const, content: pass1Content },
+          { role: "user" as const, content: formattedExecutionResults }
+        ];
+
+        // Pass 2: Stream final conversational response to user
+        const stream = nvidia.chatCompletionStream(secondPassMessages, userKey ? { apiKey: userKey } : {});
+        for await (const chunk of stream) {
+          fullContent += chunk;
+          yield chunk;
+        }
+        tokensUsed += Math.ceil(fullContent.length / 4);
+      } else {
+        // No tool calls produced: yield content directly
+        fullContent = pass1Content;
+        yield pass1Content;
       }
-      const formattedExecutionResults = results.join('\n');
-      workspaceCache.delete(userId);
-
-      // Construct messages for Second Pass
-      const secondPassMessages = [
-        ...messages,
-        { role: "assistant" as const, content: pass1Content },
-        { role: "user" as const, content: formattedExecutionResults }
-      ];
-
-      // Pass 2: Stream final conversational response to user
-      const stream = nvidia.chatCompletionStream(secondPassMessages, userKey ? { apiKey: userKey } : {});
+    } else {
+      // FAST PATH: Direct real-time streaming for conversational, coding, and general responses!
+      const stream = nvidia.chatCompletionStream(messages, userKey ? { apiKey: userKey } : {});
       for await (const chunk of stream) {
         fullContent += chunk;
         yield chunk;
       }
-      tokensUsed += Math.ceil(fullContent.length / 4); // estimate tokens for streaming pass
-    } else {
-      // No tool calls: yield simulated stream for the already-generated conversational response
-      fullContent = pass1Content;
-      const chunkSize = 8;
-      for (let i = 0; i < pass1Content.length; i += chunkSize) {
-        yield pass1Content.slice(i, i + chunkSize);
-        await new Promise(resolve => setTimeout(resolve, 5));
-      }
+      tokensUsed += Math.ceil(fullContent.length / 4);
     }
   } catch (err) {
     streamError = err;

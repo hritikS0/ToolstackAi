@@ -160,31 +160,11 @@ export function ChatPage({ conversationId }: { conversationId?: string } = {}) {
     contentRef.current = content
 
     if (thinkingRef.current.active) {
-      const elapsed = Date.now() - thinkingRef.current.startedAt
-      if (elapsed >= thinkingRef.current.minMs) {
-        thinkingRef.current.active = false
-        setIsThinking(false)
-        if (thinkingRef.current.timerId) {
-          clearTimeout(thinkingRef.current.timerId)
-          thinkingRef.current.timerId = null
-        }
-      } else {
-        thinkingRef.current.pendingContent = content
-        if (!thinkingRef.current.timerId) {
-          const remaining = thinkingRef.current.minMs - elapsed
-          thinkingRef.current.timerId = setTimeout(() => {
-            thinkingRef.current.timerId = null
-            thinkingRef.current.active = false
-            setIsThinking(false)
-            const pending = thinkingRef.current.pendingContent
-            thinkingRef.current.pendingContent = ''
-            contentRef.current = pending
-            if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
-            rafRef.current = null
-            setStreamingContent(pending)
-          }, remaining + 30)
-        }
-        return
+      thinkingRef.current.active = false
+      setIsThinking(false)
+      if (thinkingRef.current.timerId) {
+        clearTimeout(thinkingRef.current.timerId)
+        thinkingRef.current.timerId = null
       }
     }
 
@@ -287,7 +267,7 @@ export function ChatPage({ conversationId }: { conversationId?: string } = {}) {
     thinkingRef.current = {
       active: true,
       startedAt: Date.now(),
-      minMs: Math.round(180 + queryComplexity * 500 + Math.random() * 150),
+      minMs: 0,
       pendingContent: '',
       timerId: null,
     }
