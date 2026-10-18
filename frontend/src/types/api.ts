@@ -83,6 +83,7 @@ export interface PdfUploadResponse {
   documentId: string
   name: string
   chunks: number
+  answer?: string
 }
 
 export interface PdfChatResponse {

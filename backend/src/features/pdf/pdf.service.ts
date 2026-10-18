@@ -27,7 +27,8 @@ export async function processPdfUpload(
   file: Express.Multer.File,
   userId: string,
   conversationId?: string,
-): Promise<{ documentId: string; name: string; chunks: number }> {
+  userMessage?: string,
+): Promise<{ documentId: string; name: string; chunks: number; answer?: string }> {
   const prisma = getPrismaClient();
 
   const extractedText = await extractPdfText(file.path);
@@ -88,11 +89,13 @@ export async function processPdfUpload(
     },
   });
 
+  const promptText = userMessage?.trim() || `📄 ${file.originalname}`;
+
   await prisma.message.create({
     data: {
       conversationId: document.id,
       role: "user",
-      content: `📄 ${file.originalname}`,
+      content: promptText,
       chatMediaId: chatMedia.id,
     },
   });
@@ -141,7 +144,17 @@ export async function processPdfUpload(
     })),
   });
 
-  return { documentId: document.id, name: file.originalname, chunks: chunks.length };
+  let answer: string | undefined;
+  if (userMessage?.trim()) {
+    try {
+      const answerResult = await answerPdfQuestion(userMessage.trim(), document.id, userId, false);
+      answer = answerResult.answer;
+    } catch (err) {
+      logger.error({ err, documentId: document.id }, "Failed to answer question on PDF upload");
+    }
+  }
+
+  return { documentId: document.id, name: file.originalname, chunks: chunks.length, answer };
 }
 
 export async function getPdfFilePath(documentId: string): Promise<string> {
@@ -174,6 +187,7 @@ export async function answerPdfQuestion(
   question: string,
   documentId: string,
   userId: string,
+  saveUserMessage: boolean = true,
 ): Promise<{ answer: string }> {
   let store = documentStores.get(documentId);
 
@@ -295,10 +309,15 @@ export async function answerPdfQuestion(
     logger.info({ answerLength: answer.length }, "answerPdfQuestion response");
 
     const prisma = getPrismaClient();
-    await prisma.$transaction([
-      prisma.message.create({
-        data: { conversationId: documentId, role: "user", content: question },
-      }),
+    const ops: any[] = [];
+    if (saveUserMessage) {
+      ops.push(
+        prisma.message.create({
+          data: { conversationId: documentId, role: "user", content: question },
+        }),
+      );
+    }
+    ops.push(
       prisma.message.create({
         data: { conversationId: documentId, role: "assistant", content: answer },
       }),
@@ -317,7 +336,8 @@ export async function answerPdfQuestion(
         where: { id: documentId },
         data: { updatedAt: new Date() },
       }),
-    ]);
+    );
+    await prisma.$transaction(ops);
 
     return { answer };
   } catch (err) {

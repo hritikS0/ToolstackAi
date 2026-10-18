@@ -183,6 +183,9 @@ function AssistantMessage({
 }
 
 function UserMessage({ content, imageUrl, pdfAttachment, onViewPdf }: { content: string; imageUrl?: string; pdfAttachment?: MessageBlockProps['pdfAttachment']; onViewPdf?: () => void }) {
+  const isDefaultPlaceholder = content === '(Image analysis)' || (pdfAttachment && content.startsWith('📄 '))
+  const displayText = !isDefaultPlaceholder && content ? String(content).trim() : ''
+
   return (
     <div className="flex justify-end animate-fade-in">
       <div className="max-w-[90%] rounded-[4px] bg-accent-muted border border-accent/20 px-3 py-2 space-y-2">
@@ -197,10 +200,10 @@ function UserMessage({ content, imageUrl, pdfAttachment, onViewPdf }: { content:
           >
             <FileText className="size-4 text-accent shrink-0" />
             <span className="text-[12px] text-base-200 font-mono truncate">{pdfAttachment.fileName}</span>
-            <span className="text-[9px] font-mono text-base-500 shrink-0">VIEW</span>
+            {onViewPdf && <span className="text-[9px] font-mono text-base-500 shrink-0">VIEW</span>}
           </button>
         )}
-        {content && <div className="text-[15px] text-base-200 whitespace-pre-wrap">{String(content)}</div>}
+        {displayText ? <div className="text-[15px] text-base-200 whitespace-pre-wrap">{displayText}</div> : null}
       </div>
     </div>
   )

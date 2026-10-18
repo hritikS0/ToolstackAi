@@ -143,6 +143,10 @@ function loadSavedLayout(): PanelNode | null {
     if (!raw) return null
     const parsed = JSON.parse(raw)
     if (parsed && validateNode(parsed)) {
+      if (parsed.type === 'leaf') {
+        try { localStorage.removeItem(STORAGE_KEY) } catch {}
+        return null
+      }
       return parsed
     }
   } catch {}
@@ -197,7 +201,7 @@ export function WorkspaceLayoutProvider({ children }: { children: ReactNode }) {
 
   const allPanels = useMemo(() => getAllLeafPanels(layout), [layout])
   const panelCount = allPanels.length
-  const isSplitActive = layout !== null && panelCount > 0
+  const isSplitActive = layout !== null && panelCount > 1
 
   // Set active panel if current active is closed or invalid
   useEffect(() => {
@@ -243,6 +247,9 @@ export function WorkspaceLayoutProvider({ children }: { children: ReactNode }) {
     setLayout(prev => {
       if (!prev) return null
       const updated = removeFromTree(prev, panelId)
+      if (!updated || updated.type === 'leaf') {
+        return null
+      }
       return updated
     })
   }, [])

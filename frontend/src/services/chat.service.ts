@@ -35,7 +35,7 @@ export const chatService = {
     const res = await apiClient.get<{ success: boolean; data: Message[] }>(`/chat/message?conversationId=${conversationId}`)
     return res.data
   },
-  async visionChat(data: { message: string; conversationId: string; image: File }) {
+  async visionChat(data: { message: string; conversationId: string; image: File }, signal?: AbortSignal) {
     const form = new FormData()
     form.append('image', data.image)
     form.append('message', data.message)
@@ -43,6 +43,7 @@ export const chatService = {
     const res = await apiClient.post<VisionResponse>('/chat/vision', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 30000,
+      signal,
     })
     return res.data
   },

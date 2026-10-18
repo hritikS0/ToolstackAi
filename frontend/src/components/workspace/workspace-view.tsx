@@ -18,6 +18,15 @@ export function WorkspaceView() {
 
   const location = useLocation()
 
+  // Full-page configuration routes like /settings should always render via Outlet
+  if (location.pathname.startsWith('/settings')) {
+    return (
+      <div className="relative h-full w-full min-h-0 min-w-0 overflow-hidden">
+        <Outlet />
+      </div>
+    )
+  }
+
   // If a panel is maximized in split view, show only that panel
   if (isSplitActive && layout) {
     if (maximizedPanelId) {

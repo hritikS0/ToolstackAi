@@ -66,6 +66,8 @@ export function ChatPage({ conversationId }: { conversationId?: string } = {}) {
   const [showPdfViewer, setShowPdfViewer] = useState(false)
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null)
   const [attachedImage, setAttachedImage] = useState<{ file: File; preview: string } | null>(null)
+  const [attachedPdf, setAttachedPdf] = useState<{ file: File; name: string; size: string } | null>(null)
+  const [optimisticPdf, setOptimisticPdf] = useState<{ name: string } | null>(null)
   const [localImagePreviews, setLocalImagePreviews] = useState<Record<string, string>>({})
   const localImagePreviewsRef = useRef(localImagePreviews)
   localImagePreviewsRef.current = localImagePreviews
@@ -88,6 +90,9 @@ export function ChatPage({ conversationId }: { conversationId?: string } = {}) {
   const thinkingMsgInterval = useRef<ReturnType<typeof setInterval> | null>(null)
   const prevIdRef = useRef(id)
   const sentMessageCountRef = useRef<number | null>(null)
+  const isSendingRef = useRef(false)
+  const activeConvIdRef = useRef(id)
+  activeConvIdRef.current = id
 
   const [streamingSources, setStreamingSources] = useState<{ title: string; url: string; description?: string }[] | null>(null)
 
@@ -192,18 +197,82 @@ export function ChatPage({ conversationId }: { conversationId?: string } = {}) {
   }, [])
 
   const handleSend = async () => {
-    if ((!input.trim() && !attachedImage) || isStreaming) return
+    if ((!input.trim() && !attachedImage && !attachedPdf) || isStreaming || isSendingRef.current) return
+    isSendingRef.current = true
+
     let convId = id
     if (!convId) {
-      const res = await chatService.createConversation()
-      if (res.data?.conversation) {
-        convId = res.data.conversation.id
-        navigate(`/chat/${convId}`, { replace: true })
-        console.log('[chat] created conversation', convId)
-        queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      try {
+        const res = await chatService.createConversation()
+        if (res.data?.conversation) {
+          convId = res.data.conversation.id
+          navigate(`/chat/${convId}`, { replace: true })
+          console.log('[chat] created conversation', convId)
+          queryClient.invalidateQueries({ queryKey: ['conversations'] })
+        }
+      } catch (err) {
+        console.error('[chat] failed to create conversation', err)
+        isSendingRef.current = false
+        return
       }
     }
-    if (!convId) return
+    if (!convId) {
+      isSendingRef.current = false
+      return
+    }
+
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    if (attachedPdf) {
+      const pdfFile = attachedPdf.file
+      const pdfName = attachedPdf.name
+      const prompt = input.trim()
+      const displayMsg = prompt || `📄 ${pdfName}`
+      setOptimisticUserMsg(displayMsg)
+      setOptimisticPdf({ name: pdfName })
+      setAttachedPdf(null)
+      setInput('')
+      setStreamingContent('')
+      setStreamingSources(null)
+      setStreamError(null)
+      setIsStreaming(true)
+      setIsThinking(true)
+      try {
+        const res = await pdfService.uploadPdf(pdfFile, convId, prompt || undefined, controller.signal)
+        if (res.success && res.data?.answer) {
+          if (activeConvIdRef.current === convId) {
+            setStreamingContent(res.data.answer)
+          }
+        }
+      } catch (err) {
+        if (controller.signal.aborted) {
+          console.log('[chat] pdf upload aborted')
+        } else {
+          const errMsg = typeof err === 'object' && err !== null && 'response' in err
+            ? String((err as any).response?.data?.message || (err as any).message || 'Failed to process document.')
+            : err instanceof Error ? err.message : 'Failed to process document.'
+          if (activeConvIdRef.current === convId) setStreamError(errMsg)
+        }
+      } finally {
+        isSendingRef.current = false
+        if (activeConvIdRef.current === convId) {
+          setIsStreaming(false)
+          abortRef.current = null
+          if (thinkingRef.current.timerId) clearTimeout(thinkingRef.current.timerId)
+          thinkingRef.current.active = false
+          setIsThinking(false)
+          sentMessageCountRef.current = null
+          setOptimisticPdf(null)
+          setOptimisticUserMsg(null)
+          setStreamingContent('')
+          setStreamingSources(null)
+        }
+        await queryClient.refetchQueries({ queryKey: ['messages', convId] })
+        queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      }
+      return
+    }
 
     const msg = input.trim() || '(Image analysis)'
     console.log('[chat] send start', { msg, convId })
@@ -230,33 +299,39 @@ export function ChatPage({ conversationId }: { conversationId?: string } = {}) {
       sentMessageCountRef.current = (messages as Message[]).length
       setOptimisticUserMsg(msg)
       try {
-        const res = await pdfService.chat({ message: msg, documentId: convId })
+        const res = await pdfService.chat({ message: msg, documentId: convId }, controller.signal)
         if (res.success && res.data) {
-          setStreamingContent(res.data.answer)
+          if (activeConvIdRef.current === convId) {
+            setStreamingContent(res.data.answer)
+          }
         }
       } catch (err) {
-        const errMsg = typeof err === 'object' && err !== null && 'response' in err
-          ? String((err as any).response?.data?.message || (err as any).message || 'Failed to get response.')
-          : err instanceof Error ? err.message : 'Failed to get response.'
-        setStreamError(errMsg)
+        if (controller.signal.aborted) {
+          console.log('[chat] pdf chat aborted')
+        } else {
+          const errMsg = typeof err === 'object' && err !== null && 'response' in err
+            ? String((err as any).response?.data?.message || (err as any).message || 'Failed to get response.')
+            : err instanceof Error ? err.message : 'Failed to get response.'
+          if (activeConvIdRef.current === convId) setStreamError(errMsg)
+        }
       } finally {
-        setIsStreaming(false)
-        abortRef.current = null
-        if (thinkingRef.current.timerId) clearTimeout(thinkingRef.current.timerId)
-        thinkingRef.current.active = false
-        setIsThinking(false)
-        sentMessageCountRef.current = null
+        isSendingRef.current = false
+        if (activeConvIdRef.current === convId) {
+          setIsStreaming(false)
+          abortRef.current = null
+          if (thinkingRef.current.timerId) clearTimeout(thinkingRef.current.timerId)
+          thinkingRef.current.active = false
+          setIsThinking(false)
+          sentMessageCountRef.current = null
+          setOptimisticUserMsg(null)
+          setStreamingContent('')
+          setStreamingSources(null)
+        }
         await queryClient.refetchQueries({ queryKey: ['messages', convId] })
-        setOptimisticUserMsg(null)
-        setStreamingContent('')
-        setStreamingSources(null)
         queryClient.invalidateQueries({ queryKey: ['conversations'] })
       }
       return
     }
-
-    const controller = new AbortController()
-    abortRef.current = controller
 
     if (attachedImage) {
       const imgPreview = attachedImage.preview
@@ -266,32 +341,41 @@ export function ChatPage({ conversationId }: { conversationId?: string } = {}) {
       setLocalImagePreviews(prev => ({ ...prev, [msg]: imgPreview }))
       setAttachedImage(null)
       try {
-        const res = await chatService.visionChat({ message: msg, conversationId: convId, image: attachedImage.file })
+        const res = await chatService.visionChat({ message: msg, conversationId: convId, image: attachedImage.file }, controller.signal)
         if (res.success && res.data) {
-          setStreamingContent(res.data.answer)
-          console.log('[chat] vision response received')
-          if (res.data.memorySaved && res.data.memorySaved > 0) {
-            setBrainNoti(`Saved ${res.data.memorySaved} ${res.data.memorySaved === 1 ? 'memory' : 'memories'} to Brain`)
-            if (brainNotiTimer.current) clearTimeout(brainNotiTimer.current)
-            brainNotiTimer.current = setTimeout(() => setBrainNoti(null), 4000)
+          if (activeConvIdRef.current === convId) {
+            setStreamingContent(res.data.answer)
+            console.log('[chat] vision response received')
+            if (res.data.memorySaved && res.data.memorySaved > 0) {
+              setBrainNoti(`Saved ${res.data.memorySaved} ${res.data.memorySaved === 1 ? 'memory' : 'memories'} to Brain`)
+              if (brainNotiTimer.current) clearTimeout(brainNotiTimer.current)
+              brainNotiTimer.current = setTimeout(() => setBrainNoti(null), 4000)
+            }
           }
         }
       } catch (err) {
-        const errMsg = typeof err === 'object' && err !== null && 'response' in err
-          ? String((err as any).response?.data?.message || (err as any).message || 'Vision request failed.')
-          : err instanceof Error ? err.message : 'Vision request failed.'
-        setStreamError(errMsg)
+        if (controller.signal.aborted) {
+          console.log('[chat] vision request aborted')
+        } else {
+          const errMsg = typeof err === 'object' && err !== null && 'response' in err
+            ? String((err as any).response?.data?.message || (err as any).message || 'Vision request failed.')
+            : err instanceof Error ? err.message : 'Vision request failed.'
+          if (activeConvIdRef.current === convId) setStreamError(errMsg)
+        }
       } finally {
         console.log('[chat] vision complete, refetching messages')
-        setIsStreaming(false)
-        if (thinkingRef.current.timerId) clearTimeout(thinkingRef.current.timerId)
-        thinkingRef.current.active = false
-        setIsThinking(false)
-        sentMessageCountRef.current = null
+        isSendingRef.current = false
+        if (activeConvIdRef.current === convId) {
+          setIsStreaming(false)
+          if (thinkingRef.current.timerId) clearTimeout(thinkingRef.current.timerId)
+          thinkingRef.current.active = false
+          setIsThinking(false)
+          sentMessageCountRef.current = null
+          setOptimisticUserMsg(null)
+          setStreamingContent('')
+          setStreamingSources(null)
+        }
         await queryClient.refetchQueries({ queryKey: ['messages', convId] })
-        setOptimisticUserMsg(null)
-        setStreamingContent('')
-        setStreamingSources(null)
         queryClient.invalidateQueries({ queryKey: ['conversations'] })
       }
       return
@@ -307,16 +391,19 @@ export function ChatPage({ conversationId }: { conversationId?: string } = {}) {
       await chatService.streamChat(
         { message: msg, conversationId: convId, tools: { webSearch: webSearchEnabled } },
         (chunk: string) => {
+          if (activeConvIdRef.current !== convId) return
           fullContent += chunk
           scheduleRender(fullContent)
         },
         (saved: number) => {
+          if (activeConvIdRef.current !== convId) return
           console.log('[chat] brain memory saved', saved)
           setBrainNoti(`Saved ${saved} ${saved === 1 ? 'memory' : 'memories'} to Brain`)
           if (brainNotiTimer.current) clearTimeout(brainNotiTimer.current)
           brainNotiTimer.current = setTimeout(() => setBrainNoti(null), 4000)
         },
         (sources: { title: string; url: string; description?: string }[]) => {
+          if (activeConvIdRef.current !== convId) return
           console.log('[chat] stream sources', sources)
           setStreamingSources(sources)
         },
@@ -325,37 +412,42 @@ export function ChatPage({ conversationId }: { conversationId?: string } = {}) {
       console.log('[chat] stream end', { contentLength: fullContent.length })
     } catch (err) {
       failed = true
-      if (err instanceof DOMException && err.name === 'AbortError') {
-        console.log('[chat] stream stopped by user')
-        setStreamError(null)
+      if ((err instanceof DOMException && err.name === 'AbortError') || controller.signal.aborted) {
+        console.log('[chat] stream stopped by user or conversation switch')
+        if (activeConvIdRef.current === convId) setStreamError(null)
       } else {
         console.log('[chat] stream error', err)
         const errMsg = typeof err === 'object' && err !== null && 'response' in err
           ? String((err as any).response?.data?.message || (err as any).message || 'Connection failed.')
           : err instanceof Error ? err.message : 'Connection failed.'
-        setStreamError(errMsg)
+        if (activeConvIdRef.current === convId) setStreamError(errMsg)
       }
     } finally {
       console.log('[chat] stream complete', { failed, hasContent: !!fullContent })
-      setIsStreaming(false)
-      abortRef.current = null
-      if (thinkingRef.current.timerId) clearTimeout(thinkingRef.current.timerId)
-      thinkingRef.current.active = false
-      setIsThinking(false)
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
-      rafRef.current = null
-      contentRef.current = ''
+      isSendingRef.current = false
+      if (activeConvIdRef.current === convId) {
+        setIsStreaming(false)
+        abortRef.current = null
+        if (thinkingRef.current.timerId) clearTimeout(thinkingRef.current.timerId)
+        thinkingRef.current.active = false
+        setIsThinking(false)
+        if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+        rafRef.current = null
+        contentRef.current = ''
 
-      // Flush final text so a cancelled rAF can't leave streamingContent short of what was saved
-      if (fullContent) setStreamingContent(fullContent)
-      if (failed && !fullContent) setStreamingContent('')
+        // Flush final text so a cancelled rAF can't leave streamingContent short of what was saved
+        if (fullContent) setStreamingContent(fullContent)
+        if (failed && !fullContent) setStreamingContent('')
 
-      // Await refetch then clear live UI
-      sentMessageCountRef.current = null
-      await queryClient.refetchQueries({ queryKey: ['messages', convId] })
-      setOptimisticUserMsg(null)
-      setStreamingContent('')
-      setStreamingSources(null)
+        // Await refetch then clear live UI
+        sentMessageCountRef.current = null
+        await queryClient.refetchQueries({ queryKey: ['messages', convId] })
+        setOptimisticUserMsg(null)
+        setStreamingContent('')
+        setStreamingSources(null)
+      } else {
+        await queryClient.refetchQueries({ queryKey: ['messages', convId] })
+      }
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
     }
   }
@@ -367,6 +459,26 @@ export function ChatPage({ conversationId }: { conversationId?: string } = {}) {
     }
   }, [])
 
+  const handleAttachImageFile = (file: File) => {
+    const preview = URL.createObjectURL(file)
+    setAttachedImage({ file, preview })
+  }
+
+  const handleAttachPdfFile = (file: File) => {
+    const sizeStr = file.size > 1024 * 1024
+      ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+      : `${Math.round(file.size / 1024)} KB`
+    setAttachedPdf({ file, name: file.name, size: sizeStr })
+  }
+
+  const handleAttachFile = (file: File) => {
+    if (file.type.startsWith('image/')) {
+      handleAttachImageFile(file)
+    } else if (file.type === 'application/pdf') {
+      handleAttachPdfFile(file)
+    }
+  }
+
   const handleAttachImage = () => {
     fileRef.current?.click()
   }
@@ -374,35 +486,15 @@ export function ChatPage({ conversationId }: { conversationId?: string } = {}) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const preview = URL.createObjectURL(file)
-    setAttachedImage({ file, preview })
+    handleAttachImageFile(file)
     e.target.value = ''
   }
 
-  const handleAttachPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAttachPdf = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    e.target.value = ''
     if (!file) return
-    setPdfUploading(true)
-    try {
-      let convId = id
-      if (!convId) {
-        const res = await chatService.createConversation()
-        if (res.data?.conversation) {
-          convId = res.data.conversation.id
-          navigate(`/chat/${convId}`, { replace: true })
-        }
-      }
-      if (!convId) return
-      await pdfService.uploadPdf(file, convId)
-      queryClient.invalidateQueries({ queryKey: ['messages', convId] })
-      queryClient.invalidateQueries({ queryKey: ['conversations'] })
-    } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : 'PDF upload failed.'
-      setStreamError(errMsg)
-    } finally {
-      setPdfUploading(false)
-    }
+    handleAttachPdfFile(file)
+    e.target.value = ''
   }
 
 
@@ -416,14 +508,28 @@ export function ChatPage({ conversationId }: { conversationId?: string } = {}) {
   useEffect(() => {
     if (prevIdRef.current !== id) {
       prevIdRef.current = id
-      sentMessageCountRef.current = null
-      if (!isStreaming) {
-        setOptimisticUserMsg(null)
-        setStreamingContent('')
-        setStreamError(null)
+      if (abortRef.current) {
+        abortRef.current.abort()
+        abortRef.current = null
       }
+      isSendingRef.current = false
+      setIsStreaming(false)
+      setIsThinking(false)
+      if (thinkingRef.current.timerId) clearTimeout(thinkingRef.current.timerId)
+      thinkingRef.current.active = false
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current)
+        rafRef.current = null
+      }
+      contentRef.current = ''
+      sentMessageCountRef.current = null
+      setOptimisticUserMsg(null)
+      setOptimisticPdf(null)
+      setStreamingContent('')
+      setStreamingSources(null)
+      setStreamError(null)
     }
-  }, [id, isStreaming])
+  }, [id])
 
   useEffect(() => {
     if (!isThinking) {
@@ -497,17 +603,6 @@ export function ChatPage({ conversationId }: { conversationId?: string } = {}) {
                 </span>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => navigate('/settings')}
-                  className="flex items-center gap-1.5 h-7 px-2.5 rounded-[4px] border border-base-750 bg-base-900/60 text-base-400 hover:text-base-200 hover:border-accent/40 hover:bg-base-900 transition-all text-[11px] font-mono cursor-pointer"
-                  title="Active Model: NVIDIA Llama 3.2 11B Vision. Click to change provider or keys in Settings."
-                >
-                  <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-base-300 font-medium">NVIDIA Llama 3.2 11B</span>
-                  <span className="text-base-500 hidden sm:inline">• Change in Settings</span>
-                  <ArrowRight className="size-3 text-base-500 hidden sm:inline" />
-                </button>
                 {isDocument && (
                   <button
                     type="button"
@@ -626,12 +721,17 @@ export function ChatPage({ conversationId }: { conversationId?: string } = {}) {
                   />
                 ))}
 
-                {optimisticUserMsg && (sentMessageCountRef.current === null || (messages as Message[]).length <= sentMessageCountRef.current) && (
+                {optimisticUserMsg && (sentMessageCountRef.current === null || (messages as Message[]).length <= sentMessageCountRef.current) && !(
+                  (messages as Message[]).length > 0 &&
+                  (messages as Message[])[(messages as Message[]).length - 1].role === 'user' &&
+                  (messages as Message[])[(messages as Message[]).length - 1].content === optimisticUserMsg
+                ) && (
                   <MessageBlock
                     key="optimistic-user"
                     role="user"
                     content={optimisticUserMsg}
                     imageUrl={localImagePreviews[optimisticUserMsg] || undefined}
+                    pdfAttachment={optimisticPdf ? { fileName: optimisticPdf.name } : undefined}
                   />
                 )}
 
@@ -745,14 +845,17 @@ export function ChatPage({ conversationId }: { conversationId?: string } = {}) {
             onSend={handleSend}
             onStop={handleStop}
             disabled={isStreaming}
-            placeholder={isStreaming ? 'Waiting for response...' : 'Type a message...'}
-            attachedImage={attachedImage || undefined}
+            placeholder={isStreaming ? 'Waiting for response...' : undefined}
+            attachedImage={attachedImage}
+            attachedPdf={attachedPdf}
             onAttachImage={handleAttachImage}
             onRemoveImage={() => {
               if (attachedImage) URL.revokeObjectURL(attachedImage.preview)
               setAttachedImage(null)
             }}
             onAttachPdf={() => pdfFileRef.current?.click()}
+            onRemovePdf={() => setAttachedPdf(null)}
+            onAttachFile={handleAttachFile}
             uploadingPdf={pdfUploading}
           />
         ) : null}

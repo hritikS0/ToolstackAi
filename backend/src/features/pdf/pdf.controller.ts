@@ -9,7 +9,8 @@ export async function uploadPdf(req: Request, res: Response, next: NextFunction)
     if (!req.file) return res.status(400).json({ success: false, message: "No file uploaded" });
 
     const conversationId = typeof req.body.conversationId === "string" && req.body.conversationId ? req.body.conversationId : undefined;
-    const result = await processPdfUpload(req.file, userId, conversationId);
+    const message = typeof req.body.message === "string" && req.body.message.trim() ? req.body.message.trim() : undefined;
+    const result = await processPdfUpload(req.file, userId, conversationId, message);
     res.status(200).json({ success: true, data: result });
   } catch (err) {
     next(err);

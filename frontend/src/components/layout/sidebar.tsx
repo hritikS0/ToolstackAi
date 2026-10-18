@@ -35,6 +35,10 @@ export function Sidebar({ collapsed, onToggle, onThemeClick }: { collapsed: bool
   const { isSplitActive, activePanelId, allPanels, setActivePanel, replaceTool, openInSplit, setIsDraggingTool } = useWorkspaceLayout()
 
   const handleToolClick = (path: string, toolId: ToolId) => {
+    if (toolId === 'settings') {
+      navigate(path)
+      return
+    }
     if (isSplitActive) {
       // 1. If tool is already open in one of the split panels, give it first priority (focus it)!
       const existingPanel = allPanels.find(p => p.toolId === toolId)
