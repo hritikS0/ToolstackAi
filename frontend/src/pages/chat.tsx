@@ -75,7 +75,11 @@ export function ChatPage({ conversationId }: { conversationId?: string } = {}) {
   const brainNotiTimer = useRef<ReturnType<typeof setTimeout>>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef('')
+  const targetContentRef = useRef('')
+  const displayedLengthRef = useRef(0)
+  const smoothLoopActiveRef = useRef(false)
   const rafRef = useRef<number | null>(null)
+  const scrollRafRef = useRef<number | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
   const [isThinking, setIsThinking] = useState(false)
@@ -132,7 +136,11 @@ export function ChatPage({ conversationId }: { conversationId?: string } = {}) {
   })
 
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
+    if (scrollRafRef.current !== null) return
+    scrollRafRef.current = requestAnimationFrame(() => {
+      scrollRafRef.current = null
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
+    })
   }, [])
 
   const isDocument = id ? (conversations as Conversation[]).some(c => c.id === id && (!!c.storagePath || c.type === 'pdf')) : false
@@ -157,7 +165,7 @@ export function ChatPage({ conversationId }: { conversationId?: string } = {}) {
   useEffect(() => { scrollToBottom() }, [messages, streamingContent, optimisticUserMsg, isStreaming, scrollToBottom])
 
   const scheduleRender = useCallback((content: string) => {
-    contentRef.current = content
+    targetContentRef.current = content
 
     if (thinkingRef.current.active) {
       thinkingRef.current.active = false
@@ -168,11 +176,29 @@ export function ChatPage({ conversationId }: { conversationId?: string } = {}) {
       }
     }
 
-    if (rafRef.current === null) {
-      rafRef.current = requestAnimationFrame(() => {
-        rafRef.current = null
-        setStreamingContent(contentRef.current)
-      })
+    if (!smoothLoopActiveRef.current) {
+      smoothLoopActiveRef.current = true
+
+      const stepLoop = () => {
+        const target = targetContentRef.current
+        const currentLen = displayedLengthRef.current
+        const diff = target.length - currentLen
+
+        if (diff > 0) {
+          // Dynamic pacing: if packets arrive in bursts, smoothly interpolate characters
+          // so visual output doesn't freeze between network packet intervals
+          const step = Math.max(1, Math.min(diff, Math.ceil(diff / 3)))
+          const nextLen = currentLen + step
+          displayedLengthRef.current = nextLen
+          setStreamingContent(target.slice(0, nextLen))
+          rafRef.current = requestAnimationFrame(stepLoop)
+        } else {
+          smoothLoopActiveRef.current = false
+          rafRef.current = null
+        }
+      }
+
+      rafRef.current = requestAnimationFrame(stepLoop)
     }
   }, [])
 
@@ -413,6 +439,9 @@ export function ChatPage({ conversationId }: { conversationId?: string } = {}) {
         setIsThinking(false)
         if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
         rafRef.current = null
+        smoothLoopActiveRef.current = false
+        targetContentRef.current = ''
+        displayedLengthRef.current = 0
         contentRef.current = ''
 
         // Flush final text so a cancelled rAF can't leave streamingContent short of what was saved
@@ -501,6 +530,9 @@ export function ChatPage({ conversationId }: { conversationId?: string } = {}) {
         cancelAnimationFrame(rafRef.current)
         rafRef.current = null
       }
+      smoothLoopActiveRef.current = false
+      targetContentRef.current = ''
+      displayedLengthRef.current = 0
       contentRef.current = ''
       sentMessageCountRef.current = null
       setOptimisticUserMsg(null)

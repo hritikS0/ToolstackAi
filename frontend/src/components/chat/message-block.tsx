@@ -1,4 +1,4 @@
-import { useState, memo } from 'react'
+import { useState, useMemo, memo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
 import remarkGfm from 'remark-gfm'
@@ -35,6 +35,10 @@ function AssistantMessage({
   const safeContent = String(content)
   const hasContent = safeContent.length > 0
   const showThinking = isThinking && !hasContent
+
+  // Defer heavy syntax highlighting until stream completes to prevent main-thread freezing
+  const rehypePlugins = useMemo(() => isStreaming ? [] : [rehypeHighlight], [isStreaming])
+  const remarkPlugins = useMemo(() => [remarkGfm], [])
 
   const handleCopy = () => {
     navigator.clipboard.writeText(safeContent)
@@ -75,8 +79,8 @@ function AssistantMessage({
             <>
               <div className="prose prose-invert max-w-none text-[15px] leading-relaxed">
                 <ReactMarkdown
-                  rehypePlugins={[rehypeHighlight]}
-                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={rehypePlugins}
+                  remarkPlugins={remarkPlugins}
                   components={{
                     a: ({ href, children }) => (
                       <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
