@@ -24,7 +24,7 @@ export async function visionChat(
   userId: string,
 ): Promise<{ answer: string; memorySaved: number }> {
   const apiKey = await getApiKeyForUser(userId);
-  const model = process.env.NVIDIA_VISION_MODEL || "meta/llama-3.2-11b-vision-instruct";
+  const model = process.env.NVIDIA_VISION_MODEL || "nvidia/nemotron-3.5-bolt-e4b";
 
   const fileBuffer = await fs.readFile(file.path);
   const base64Image = fileBuffer.toString("base64");

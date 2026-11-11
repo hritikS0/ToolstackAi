@@ -203,7 +203,7 @@ export function Composer({
         <div className="flex items-center justify-between mt-2 px-1 text-[11px] font-mono text-base-500">
           <div className="flex items-center gap-1.5">
             <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Model: <span className="text-base-300 font-medium">NVIDIA Llama 3.2 11B Vision</span></span>
+            <span>Model: <span className="text-base-300 font-medium">NVIDIA Nemotron 3.5 Bolt</span></span>
           </div>
           <a
             href="/settings"

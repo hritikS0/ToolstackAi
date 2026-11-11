@@ -684,7 +684,7 @@ export function ChatPage({ conversationId }: { conversationId?: string } = {}) {
 
                   <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-base-800 bg-base-950/90 mb-7 text-[11px] font-mono text-base-400 max-w-lg shadow-sm">
                     <span className="size-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                    <span className="truncate">Active Model: <strong className="text-base-200">NVIDIA Llama 3.2 11B Vision</strong></span>
+                    <span className="truncate">Active Model: <strong className="text-base-200">NVIDIA Nemotron 3.5 Bolt</strong></span>
                     <span className="text-base-600">•</span>
                     <button
                       type="button"

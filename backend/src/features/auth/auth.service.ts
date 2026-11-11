@@ -12,7 +12,7 @@ ToolStackAI is your **AI-powered developer operating system** — chat with AI, 
 ---
 
 ## ⚡ Active AI Model
-> **Currently Active:** **NVIDIA NIM** running \`meta/llama-3.2-11b-vision-instruct\` (Vision & Text Reasoning).  
+> **Currently Active:** **NVIDIA NIM** running \`nvidia/nemotron-3.5-bolt-e4b\` (Vision & Ultra-fast Reasoning).  
 > You can start chatting immediately!
 
 ### ⚙️ Want to change models or bring your own API key?
